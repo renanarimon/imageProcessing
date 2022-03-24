@@ -55,29 +55,31 @@ def main():
 
     # Convert Color spaces
     img = imReadAndConvert(img_path, LOAD_RGB)
+    print(img.dtype)
     yiq_img = transformRGB2YIQ(img)
+    print(yiq_img)
     f, ax = plt.subplots(1, 2)
     ax[0].imshow(img)
     ax[1].imshow(yiq_img)
     plt.show()
 
-    ### my code to check transformYIQ2RGB##########
-    img2 = transformYIQ2RGB(yiq_img)
-    f1, ax1 = plt.subplots(1, 2)
-    ax1[0].imshow(img)
-    ax1[1].imshow(img2)
-    plt.show()
+    # ### my code to check transformYIQ2RGB##########
+    # img2 = transformYIQ2RGB(yiq_img)
+    # f1, ax1 = plt.subplots(1, 2)
+    # ax1[0].imshow(img)
+    # ax1[1].imshow(img2)
+    # plt.show()
 
     # Image histEq
     histEqDemo(img_path, LOAD_GRAY_SCALE)
-    histEqDemo(img_path, LOAD_RGB)
+    # histEqDemo(img_path, LOAD_RGB)
 
-    # Image Quantization
-    quantDemo(img_path, LOAD_GRAY_SCALE)
-    quantDemo(img_path, LOAD_RGB)
-
-    # Gamma
-    gammaDisplay(img_path, LOAD_GRAY_SCALE)
+    # # Image Quantization
+    # quantDemo(img_path, LOAD_GRAY_SCALE)
+    # quantDemo(img_path, LOAD_RGB)
+    #
+    # # Gamma
+    # gammaDisplay(img_path, LOAD_GRAY_SCALE)
 
 
 if __name__ == '__main__':

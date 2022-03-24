@@ -77,7 +77,6 @@ def transformRGB2YIQ(imgRGB: np.ndarray) -> np.ndarray:
     return np.dot(imgRGB, arrConvert)
 
 
-
 def transformYIQ2RGB(imgYIQ: np.ndarray) -> np.ndarray:
     """
     Converts an YIQ image to RGB color space
@@ -97,6 +96,21 @@ def hsitogramEqualize(imgOrig: np.ndarray) -> (np.ndarray, np.ndarray, np.ndarra
         :param imgOrig: Original Histogram
         :ret
     """
+
+    # if imgOrig is RGB --> convert to YIQ and use only Y
+    if len(imgOrig.shape) == 3:
+        imgTIQ = transformRGB2YIQ(imgOrig)
+        y = imgTIQ[:, :, 0]
+    else:
+        y = imgOrig
+
+    imgNorm255 = (y * (255.0 / np.amax(y))).astype(np.uint8)
+    histOrg, bins = np.histogram(imgNorm255, bins=256, range=[0, 255])
+    cumSum = np.cumsum(imgNorm255)
+    cumSum = cumSum / np.amax(cumSum)
+    LUT = np.ndarray(y.shape)
+
+
     pass
 
 
