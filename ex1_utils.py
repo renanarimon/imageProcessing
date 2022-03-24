@@ -70,44 +70,12 @@ def transformRGB2YIQ(imgRGB: np.ndarray) -> np.ndarray:
     :return: A YIQ in image color space
     """
 
+    arrConvert = np.transpose(np.array([[0.299, 0.587, 0.114],
+                                        [0.596, -0.275, -0.321],
+                                        [0.212, -0.523, 0.311]]))
 
-    # print(imgRGB[0,0])
-    # print("***************************")
+    return np.dot(imgRGB, arrConvert)
 
-    arrConvert = np.array([[0.299, 0.587, 0.114],
-                           [0.596, -0.275, -0.321],
-                           [0.212, -0.523, 0.311]])
-
-    red = imgRGB[:,:,0]
-    green = imgRGB[:,:,1]
-    blue = imgRGB[:,:,2]
-    colorsys.rgb_to_yiq(red, green, blue)
-
-    # print(green.shape)
-    # plt.imshow(red)  # if img is gray, plot it gray
-    # plt.show()
-    # plt.imshow(green)  # if img is gray, plot it gray
-    # plt.show()
-    # plt.imshow(blue)  # if img is gray, plot it gray
-    # plt.show()
-
-
-
-
-    # t = imgRGB[0].transpose()
-    # print(t.shape)
-    # print(t)
-    #
-    # # t = t.transpose()
-    # # print(t)
-    # # print(np.matmul(arrConvert, t))
-    # arrYIQ = np.matmul(arrConvert, t)
-    # print("$$$$$$$$$$$$$$$$$$$$$$$$")
-    # print(arrYIQ.transpose())
-    # # print(arrYIQ)
-    # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`")
-
-    pass
 
 
 def transformYIQ2RGB(imgYIQ: np.ndarray) -> np.ndarray:
@@ -116,7 +84,11 @@ def transformYIQ2RGB(imgYIQ: np.ndarray) -> np.ndarray:
     :param imgYIQ: An Image in YIQ
     :return: A RGB in image color space
     """
-    pass
+    arrConvert = np.transpose(np.array([[1, 0.956, 0.621],
+                                        [1, -0.272, -0.647],
+                                        [1, -1.106, 1.703]]))
+
+    return np.dot(imgYIQ, arrConvert)
 
 
 def hsitogramEqualize(imgOrig: np.ndarray) -> (np.ndarray, np.ndarray, np.ndarray):

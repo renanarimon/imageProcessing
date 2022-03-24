@@ -61,6 +61,13 @@ def main():
     ax[1].imshow(yiq_img)
     plt.show()
 
+    ### my code to check transformYIQ2RGB##########
+    img2 = transformYIQ2RGB(yiq_img)
+    f1, ax1 = plt.subplots(1, 2)
+    ax1[0].imshow(img)
+    ax1[1].imshow(img2)
+    plt.show()
+
     # Image histEq
     histEqDemo(img_path, LOAD_GRAY_SCALE)
     histEqDemo(img_path, LOAD_RGB)
