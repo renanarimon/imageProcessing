@@ -55,9 +55,7 @@ def main():
 
     # Convert Color spaces
     img = imReadAndConvert(img_path, LOAD_RGB)
-    print(img.dtype)
     yiq_img = transformRGB2YIQ(img)
-    print(yiq_img)
     f, ax = plt.subplots(1, 2)
     ax[0].imshow(img)
     ax[1].imshow(yiq_img)
@@ -72,7 +70,7 @@ def main():
 
     # Image histEq
     histEqDemo(img_path, LOAD_GRAY_SCALE)
-    # histEqDemo(img_path, LOAD_RGB)
+    histEqDemo(img_path, LOAD_RGB)
 
     # # Image Quantization
     # quantDemo(img_path, LOAD_GRAY_SCALE)

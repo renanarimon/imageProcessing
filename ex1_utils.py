@@ -96,22 +96,77 @@ def hsitogramEqualize(imgOrig: np.ndarray) -> (np.ndarray, np.ndarray, np.ndarra
         :param imgOrig: Original Histogram
         :ret
     """
-
+    gray = True
     # if imgOrig is RGB --> convert to YIQ and use only Y
+
     if len(imgOrig.shape) == 3:
-        imgTIQ = transformRGB2YIQ(imgOrig)
-        y = imgTIQ[:, :, 0]
+        imgYIQ = transformRGB2YIQ(imgOrig)
+        gray = False
+        y = imgYIQ[:, :, 0]
     else:
         y = imgOrig
 
+    # un-norm: [0,1] --> [0,255]
     imgNorm255 = (y * (255.0 / np.amax(y))).astype(np.uint8)
+
+    # calc imgOrg histogram
     histOrg, bins = np.histogram(imgNorm255, bins=256, range=[0, 255])
-    cumSum = np.cumsum(imgNorm255)
-    cumSum = cumSum / np.amax(cumSum)
-    LUT = np.ndarray(y.shape)
+
+    # calc cumsum & normalize
+    cumSum = np.cumsum(histOrg)
+    cumSum = cumSum / np.max(cumSum)
+
+    # calc LUT
+    LUT = makeLUT(cumSum)
+
+    # map img by LUT
+    imgNew = mapByLUT(LUT, imgNorm255)
+
+    # calc imEq histogram
+    histEq, bins = np.histogram(imgNew, bins=256, range=[0, 255])
+
+    # normalize imEq
+    imgNew = imgNew / np.max(imgNew)
+
+    # transform img back to RGB
+    if not gray:
+        imgYIQ = transformRGB2YIQ(imgOrig)
+        imgYIQ[:, :, 0] = imgNew
+        imEq = transformYIQ2RGB(imgYIQ)
+        return imEq, histOrg, histEq
+
+    if gray:
+        return imgNew, histOrg, histEq
 
 
-    pass
+def makeLUT(cumSum: np.ndarray) -> np.ndarray:
+    """
+    make LookUp Table (LUT):
+        * index: pixel id
+        * value: new intensity of this pixel
+    ~should be linear~
+    :param cumSum:
+    :return:
+    """
+    lut = np.zeros(256)
+    for pixel in range(256):
+        lut[pixel] = np.ceil((cumSum[pixel] / np.max(cumSum)) * 255)
+    return lut
+
+
+def mapByLUT(LUT: np.ndarray, imgOrig: np.ndarray) -> np.ndarray:
+    """
+    map the new image by imgOrg and LUT.
+    each pixel that have the i color in imgOrig,
+    get the new color by LUT in imEq.
+    :param LUT:
+    :param imgOrig:
+    :return: imEq
+    """
+    imEq = np.zeros_like(imgOrig, dtype=np.uint8)
+    for i in range(256):
+        imEq[imgOrig == i] = LUT[i]
+    return imEq
 
 
 def quantizeImage(imOrig: np.ndarray, nQuant: int, nIter: int) -> (List[np.ndarray], List[float]):
