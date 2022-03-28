@@ -48,18 +48,19 @@ def quantDemo(img_path: str, rep: int):
 def main():
     print("ID:", myID())
     img_path = 'beach.jpg'
-
-    # Basic read and display
-    imDisplay(img_path, LOAD_GRAY_SCALE)
-    imDisplay(img_path, LOAD_RGB)
-
-    # Convert Color spaces
     img = imReadAndConvert(img_path, LOAD_RGB)
-    yiq_img = transformRGB2YIQ(img)
-    f, ax = plt.subplots(1, 2)
-    ax[0].imshow(img)
-    ax[1].imshow(yiq_img)
-    plt.show()
+
+    # # Basic read and display
+    # imDisplay(img_path, LOAD_GRAY_SCALE)
+    # imDisplay(img_path, LOAD_RGB)
+    #
+    # # Convert Color spaces
+    # img = imReadAndConvert(img_path, LOAD_RGB)
+    # yiq_img = transformRGB2YIQ(img)
+    # f, ax = plt.subplots(1, 2)
+    # ax[0].imshow(img)
+    # ax[1].imshow(yiq_img)
+    # plt.show()
 
     # ### my code to check transformYIQ2RGB##########
     # img2 = transformYIQ2RGB(yiq_img)
@@ -68,13 +69,13 @@ def main():
     # ax1[1].imshow(img2)
     # plt.show()
 
-    # Image histEq
-    histEqDemo(img_path, LOAD_GRAY_SCALE)
-    histEqDemo(img_path, LOAD_RGB)
+    # # Image histEq
+    # histEqDemo(img_path, LOAD_GRAY_SCALE)
+    # histEqDemo(img_path, LOAD_RGB)
 
     # # Image Quantization
-    # quantDemo(img_path, LOAD_GRAY_SCALE)
-    # quantDemo(img_path, LOAD_RGB)
+    quantDemo(img_path, LOAD_GRAY_SCALE)
+    quantDemo(img_path, LOAD_RGB)
     #
     # # Gamma
     # gammaDisplay(img_path, LOAD_GRAY_SCALE)

@@ -9,11 +9,13 @@
         ........::..:::::..:::......::
 """
 import colorsys
+import sys
 from typing import List
 
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
+from sklearn.metrics import mean_squared_error
 
 LOAD_GRAY_SCALE = 1
 LOAD_RGB = 2
@@ -96,15 +98,8 @@ def hsitogramEqualize(imgOrig: np.ndarray) -> (np.ndarray, np.ndarray, np.ndarra
         :param imgOrig: Original Histogram
         :ret
     """
-    gray = True
     # if imgOrig is RGB --> convert to YIQ and use only Y
-
-    if len(imgOrig.shape) == 3:
-        imgYIQ = transformRGB2YIQ(imgOrig)
-        gray = False
-        y = imgYIQ[:, :, 0]
-    else:
-        y = imgOrig
+    y, gray = isGray(imgOrig)
 
     # un-norm: [0,1] --> [0,255]
     imgNorm255 = (y * (255.0 / np.amax(y))).astype(np.uint8)
@@ -177,4 +172,71 @@ def quantizeImage(imOrig: np.ndarray, nQuant: int, nIter: int) -> (List[np.ndarr
         :param nIter: Number of optimization loops
         :return: (List[qImage_i],List[error_i])
     """
-    pass
+    qImgList = []
+    errorList = []
+
+    y, gray = isGray(imOrig)
+    # un-norm: [0,1] --> [0,255]
+    imgNorm255 = (y * (255.0 / np.amax(y))).astype(np.uint8)
+
+    # set borders - lower=0, upper=255, and the other k-1 spread evenly (in terms of number of pixels)
+    histOrg, bins = np.histogram(imgNorm255, bins=256, range=[0, 255])
+    # plt.plot(range(256), histOrg)
+    # plt.show()
+    cumSum = np.cumsum(histOrg)
+    z = np.zeros(nQuant + 1).astype(np.uint8)
+    z[nQuant] = 255
+    k = 1
+    for i in range(255):
+        if k == nQuant:
+            break
+        pixelNum = (k / nQuant) * cumSum[255]
+        if cumSum[i] <= pixelNum <= cumSum[i + 1]:
+            z[k] = i
+            k += 1
+
+    for n in range(nIter):
+        # weighted mean
+        q = np.zeros(nQuant).astype(np.uint8)
+        i = 0
+        for j in range(nQuant):
+            q[i] = int(np.average(range(z[j], z[j + 1]), weights=histOrg[z[j]:z[j + 1]]))
+            i += 1
+
+        # set borders
+        for i in range(1, nQuant):
+            x = int(q[i - 1]) + int(q[i])
+            z[i] = x / 2
+
+        # fill tmpImg by curr quantization colors
+        tmpImg = np.zeros_like(y)
+        for i in range(nQuant):
+            tmpImg[(z[i] <= imgNorm255) & (imgNorm255 <= z[i + 1])] = q[i]
+            i += 1
+        if not gray:
+            imgYIQ = transformRGB2YIQ(imOrig)
+            imgYIQ[:, :, 0] = tmpImg
+            currImg = transformYIQ2RGB(imgYIQ)
+            currImg = currImg / np.max(currImg)
+            qImgList.append(currImg)
+        else:
+            # currImg = tmpImg / np.max(tmpImg)
+            qImgList.append(tmpImg)
+
+        # calc MSE
+        mse = mean_squared_error(imgNorm255, tmpImg)
+
+        errorList.append(mse)
+
+    return qImgList, errorList
+
+
+def isGray(imgOrig: np.ndarray) -> (np.ndarray, bool):
+    gray = True
+    if len(imgOrig.shape) == 3:
+        imgYIQ = transformRGB2YIQ(imgOrig)
+        gray = False
+        y = imgYIQ[:, :, 0]
+    else:
+        y = imgOrig
+    return y, gray
