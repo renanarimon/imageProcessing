@@ -1,3 +1,4 @@
+
 """
         '########:'##::::'##::::'##:::
          ##.....::. ##::'##:::'####:::
@@ -213,20 +214,19 @@ def quantizeImage(imOrig: np.ndarray, nQuant: int, nIter: int) -> (List[np.ndarr
         for i in range(nQuant):
             tmpImg[(z[i] <= imgNorm255) & (imgNorm255 <= z[i + 1])] = q[i]
             i += 1
-        if not gray:
-            imgYIQ = transformRGB2YIQ(imOrig)
-            imgYIQ[:, :, 0] = tmpImg
-            currImg = transformYIQ2RGB(imgYIQ)
-            currImg = currImg / np.max(currImg)
-            qImgList.append(currImg)
-        else:
-            # currImg = tmpImg / np.max(tmpImg)
-            qImgList.append(tmpImg)
 
         # calc MSE
         mse = mean_squared_error(imgNorm255, tmpImg)
-
         errorList.append(mse)
+        tmpImg /= 255
+        if not gray:
+            imgYIQ = transformRGB2YIQ(imOrig)
+            currImg = transformYIQ2RGB(np.dstack((tmpImg, imgYIQ[:, :, 1], imgYIQ[:, :, 2])))
+            qImgList.append(currImg)
+        else:
+            qImgList.append(tmpImg)
+
+
 
     return qImgList, errorList
 
