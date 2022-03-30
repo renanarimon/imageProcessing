@@ -11,20 +11,26 @@
 from __future__ import division
 from __future__ import print_function
 
+import cv2
+
+import ex1_utils
 from ex1_utils import LOAD_GRAY_SCALE
 import cv2 as cv
 import ex1_utils as ex
+import numpy as np
 import argparse
 
-alpha_slider_max = 100
+gamma_slider_max = 200
 title_window = "gammaDisplay"
 
 
-def on_trackbar(val, img1, img2):
-    alpha = val / alpha_slider_max
-    beta = (1.0 - alpha)
-    dst = cv.addWeighted(img1, alpha, img2, beta, 0.0)
-    cv.imshow(title_window, dst)
+def on_trackbar(val: int):
+    g = float(val) / 100
+    gamma = 100.0 if g == 0 else 1.0 / g
+    lut = np.array([((i / 255.0) ** gamma) * 255 for i in np.arange(0, 256)]).astype(np.uint8)
+
+    imgCorrect = cv2.LUT(img, lut)
+    cv2.imshow(title_window, imgCorrect)
 
 
 def gammaDisplay(img_path: str, rep: int):
@@ -34,19 +40,22 @@ def gammaDisplay(img_path: str, rep: int):
     :param rep: grayscale(1) or RGB(2)
     :return: None
     """
-    img = ex.imReadAndConvert(img_path, rep)
-    cv.namedWindow(title_window)
-    trackbar_name = 'Alpha x %d' % alpha_slider_max
-    cv.createTrackbar(trackbar_name, title_window, 0, alpha_slider_max, on_trackbar)
-    # Show some stuff
-    on_trackbar(5, img, img)
-    # Wait until user press some key
-    cv.waitKey()
-    pass
+    global img
+    if rep == 1:
+        img = cv2.imread(img_path, 2)
+    else:
+        img = cv2.imread(img_path, 1)
+
+    cv2.namedWindow(title_window)
+    trackbar_name = 'GAMMA'
+    cv2.createTrackbar(trackbar_name, title_window, 100, gamma_slider_max, on_trackbar)
+    on_trackbar(100)
+    cv2.waitKey()
+
 
 
 def main():
-    gammaDisplay('bac_con.png', LOAD_GRAY_SCALE)
+    gammaDisplay('beach.jpg', ex1_utils.LOAD_RGB)
 
 
 if __name__ == '__main__':
