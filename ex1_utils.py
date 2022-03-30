@@ -1,4 +1,3 @@
-
 """
         '########:'##::::'##::::'##:::
          ##.....::. ##::'##:::'####:::
@@ -188,13 +187,16 @@ def quantizeImage(imOrig: np.ndarray, nQuant: int, nIter: int) -> (List[np.ndarr
     z = np.zeros(nQuant + 1).astype(np.uint8)
     z[nQuant] = 255
     k = 1
-    for i in range(255):
-        if k == nQuant:
-            break
-        pixelNum = (k / nQuant) * cumSum[255]
-        if cumSum[i] <= pixelNum <= cumSum[i + 1]:
-            z[k] = i
-            k += 1
+    # for i in range(255):
+    #     if k == nQuant:
+    #         break
+    #     pixelNum = (k / nQuant) * cumSum[255]
+    #     if cumSum[i] <= pixelNum <= cumSum[i + 1]:
+    #         z[k] = i
+    #         k += 1
+
+    for i in range(nQuant + 1):
+        z[i] = i * (255.0 / nQuant)
 
     for n in range(nIter):
         # weighted mean
@@ -216,7 +218,8 @@ def quantizeImage(imOrig: np.ndarray, nQuant: int, nIter: int) -> (List[np.ndarr
             i += 1
 
         # calc MSE
-        mse = mean_squared_error(imgNorm255, tmpImg)
+        # mse = mean_squared_error(imgNorm255, tmpImg)
+        mse = (np.sqrt((imgNorm255-tmpImg)**2)).mean()
         errorList.append(mse)
         tmpImg /= 255
         if not gray:
