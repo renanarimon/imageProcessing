@@ -1,12 +1,5 @@
 """
-        '########:'##::::'##::::'##:::
-         ##.....::. ##::'##:::'####:::
-         ##::::::::. ##'##::::.. ##:::
-         ######:::::. ###::::::: ##:::
-         ##...:::::: ## ##:::::: ##:::
-         ##:::::::: ##:. ##::::: ##:::
-         ########: ##:::. ##::'######:
-        ........::..:::::..:::......::
+author: renana rimon
 """
 from __future__ import division
 from __future__ import print_function
@@ -41,7 +34,7 @@ def gammaCorrect(val: int):
     :return: correct img
     """
     g = float(val) / 100
-    gamma = 100.0 if g == 0 else 1.0 / g
+    gamma = 100.0 if g <= 0 else 1.0 / g
     lut = np.array([((i / 255.0) ** gamma) * 255 for i in np.arange(0, 256)]).astype(np.uint8)
     imgCorrect = cv2.LUT(img, lut)
     width, height = getWidthHeight(imgCorrect)

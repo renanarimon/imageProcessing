@@ -1,12 +1,5 @@
 """
-        '########:'##::::'##::::'##:::
-         ##.....::. ##::'##:::'####:::
-         ##::::::::. ##'##::::.. ##:::
-         ######:::::. ###::::::: ##:::
-         ##...:::::: ## ##:::::: ##:::
-         ##:::::::: ##:. ##::::: ##:::
-         ########: ##:::. ##::'######:
-        ........::..:::::..:::......::
+author: renana rimon
 """
 import sys
 from typing import List
@@ -34,7 +27,10 @@ def imReadAndConvert(filename: str, representation: int) -> np.ndarray:
     :param representation: GRAY_SCALE (1) or RGB (2)
     :return: The image object
     """
-    img = cv2.imread(filename)
+    try:
+        img = cv2.imread(filename)
+    except FileNotFoundError:
+        print("Wrong file or file path")
 
     # BGR --> GRAY
     if representation == 1:
@@ -43,6 +39,8 @@ def imReadAndConvert(filename: str, representation: int) -> np.ndarray:
     # BGR --> RGB
     elif representation == 2:
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    else:
+        raise Exception("rep must be 0 or 1")
 
     # scale [0,255] --> [0,1]
     # use info.max to ensure that the scale is accurate to the image
@@ -100,6 +98,8 @@ def hsitogramEqualize(imgOrig: np.ndarray) -> (np.ndarray, np.ndarray, np.ndarra
     y, gray = isGray(imgOrig)
 
     # un-norm: [0,1] --> [0,255]
+    if np.amax(y) <= 0:
+        raise ZeroDivisionError()
     imgNorm255 = (y * (255.0 / np.amax(y))).astype(np.uint8)
 
     # calc imgOrg histogram
@@ -107,10 +107,12 @@ def hsitogramEqualize(imgOrig: np.ndarray) -> (np.ndarray, np.ndarray, np.ndarra
 
     # calc cumsum & normalize
     cumSum = np.cumsum(histOrg)
-    cumSum = cumSum / np.max(cumSum)
-
-    # calc LUT
-    lut = np.array([np.ceil((cumSum[i] / np.max(cumSum)) * 255) for i in np.arange(0, 256)]).astype(np.uint8)
+    try:
+        cumSum = cumSum / np.max(cumSum)
+        # calc LUT
+        lut = np.array([np.ceil((cumSum[i] / np.max(cumSum)) * 255) for i in np.arange(0, 256)]).astype(np.uint8)
+    except ZeroDivisionError:
+        raise "ZeroDivisionError"
 
     # map img by LUT
     imgNew = cv2.LUT(imgNorm255, lut)
@@ -119,7 +121,10 @@ def hsitogramEqualize(imgOrig: np.ndarray) -> (np.ndarray, np.ndarray, np.ndarra
     histEq, bins = np.histogram(imgNew, bins=256, range=[0, 255])
 
     # normalize: [0,255] --> [0,1]
-    imgNew = imgNew / np.max(imgNew)
+    try:
+        imgNew = imgNew / np.max(imgNew)
+    except ZeroDivisionError:
+        raise "ZeroDivisionError"
 
     # back to origin color
     if not gray:
@@ -145,14 +150,14 @@ def quantizeImage(imOrig: np.ndarray, nQuant: int, nIter: int) -> (List[np.ndarr
     errorList = []
     # handle negative args
     if nQuant < 1 or nIter < 1:
-        qImgList.append(imOrig)
-        errorList.append(0)
-        return qImgList, errorList
+        raise Exception
 
     # y: graySale img, gray: True ig imgOrig was gray
     y, gray = isGray(imOrig)
 
     # un-norm: [0,1] --> [0,255]
+    if np.amax(y) <= 0:
+        raise ZeroDivisionError()
     imgNorm255 = (y * (255.0 / np.amax(y))).astype(np.uint8)
 
     histOrg, bins = np.histogram(imgNorm255, bins=256, range=[0, 255])
