@@ -8,14 +8,12 @@
          ########: ##:::. ##::'######:
         ........::..:::::..:::......::
 """
-import colorsys
 import sys
 from typing import List
 
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
-from sklearn.metrics import mean_squared_error
 
 LOAD_GRAY_SCALE = 1
 LOAD_RGB = 2
@@ -112,18 +110,18 @@ def hsitogramEqualize(imgOrig: np.ndarray) -> (np.ndarray, np.ndarray, np.ndarra
     cumSum = cumSum / np.max(cumSum)
 
     # calc LUT
-    LUT = makeLUT(cumSum)
+    lut = np.array([np.ceil((cumSum[i] / np.max(cumSum)) * 255) for i in np.arange(0, 256)]).astype(np.uint8)
 
     # map img by LUT
-    imgNew = mapByLUT(LUT, imgNorm255)
+    imgNew = cv2.LUT(imgNorm255, lut)
 
     # calc imEq histogram
     histEq, bins = np.histogram(imgNew, bins=256, range=[0, 255])
 
-    # normalize imEq
+    # normalize: [0,255] --> [0,1]
     imgNew = imgNew / np.max(imgNew)
 
-    # transform img back to RGB
+    # back to origin color
     if not gray:
         imgYIQ = transformRGB2YIQ(imgOrig)
         imgYIQ[:, :, 0] = imgNew
@@ -132,36 +130,6 @@ def hsitogramEqualize(imgOrig: np.ndarray) -> (np.ndarray, np.ndarray, np.ndarra
 
     if gray:
         return imgNew, histOrg, histEq
-
-
-def makeLUT(cumSum: np.ndarray) -> np.ndarray:
-    """
-    make LookUp Table (LUT):
-        * index: pixel id
-        * value: new intensity of this pixel
-    ~should be linear~
-    :param cumSum:
-    :return:
-    """
-    lut = np.zeros(256)
-    for pixel in range(256):
-        lut[pixel] = np.ceil((cumSum[pixel] / np.max(cumSum)) * 255)
-    return lut
-
-
-def mapByLUT(LUT: np.ndarray, imgOrig: np.ndarray) -> np.ndarray:
-    """
-    map the new image by imgOrg and LUT.
-    each pixel that have the i color in imgOrig,
-    get the new color by LUT in imEq.
-    :param LUT:
-    :param imgOrig:
-    :return: imEq
-    """
-    imEq = np.zeros_like(imgOrig, dtype=np.uint8)
-    for i in range(256):
-        imEq[imgOrig == i] = LUT[i]
-    return imEq
 
 
 def quantizeImage(imOrig: np.ndarray, nQuant: int, nIter: int) -> (List[np.ndarray], List[float]):
@@ -175,15 +143,16 @@ def quantizeImage(imOrig: np.ndarray, nQuant: int, nIter: int) -> (List[np.ndarr
     qImgList = []
     errorList = []
 
+    # y: graySale img, gray: True ig imgOrig was gray
     y, gray = isGray(imOrig)
+
     # un-norm: [0,1] --> [0,255]
     imgNorm255 = (y * (255.0 / np.amax(y))).astype(np.uint8)
 
-    # set borders - lower=0, upper=255, and the other k-1 spread evenly (in terms of number of pixels)
     histOrg, bins = np.histogram(imgNorm255, bins=256, range=[0, 255])
-    # plt.plot(range(256), histOrg)
-    # plt.show()
     cumSum = np.cumsum(histOrg)
+
+    # Z: set borders - uniform pixel num each interval
     z = np.zeros(nQuant + 1).astype(np.uint8)
     z[nQuant] = 255
     k = 1
@@ -194,20 +163,17 @@ def quantizeImage(imOrig: np.ndarray, nQuant: int, nIter: int) -> (List[np.ndarr
         if cumSum[i] <= pixelNum <= cumSum[i + 1]:
             z[k] = i
             k += 1
-    print(z)
 
-    # for i in range(nQuant + 1):
-    #     z[i] = i * (255.0 / nQuant)
-
+    # main loop
     for n in range(nIter):
-        # weighted mean
+        # q: weighted mean of each interval
         q = np.zeros(nQuant).astype(np.uint8)
         i = 0
         for j in range(nQuant):
             q[i] = int(np.average(range(z[j], z[j + 1]), weights=histOrg[z[j]:z[j + 1]]))
             i += 1
 
-        # set borders
+        # Z: set borders according to q
         for i in range(1, nQuant):
             x = int(q[i - 1]) + int(q[i])
             z[i] = x / 2
@@ -218,23 +184,31 @@ def quantizeImage(imOrig: np.ndarray, nQuant: int, nIter: int) -> (List[np.ndarr
             tmpImg[(z[i] <= imgNorm255) & (imgNorm255 <= z[i + 1])] = q[i]
             i += 1
 
-        # calc MSE
-        mse = (np.sqrt((imgNorm255-tmpImg)**2)).mean()
-        if len(errorList) > 0 and (errorList[-1] - mse) <sys.float_info.epsilon:
+        # calc MSE - break if there is convergence
+        mse = (np.sqrt((imgNorm255 - tmpImg) ** 2)).mean()
+        if len(errorList) > 0 and (errorList[-1] - mse) < sys.float_info.epsilon:
             break
         errorList.append(mse)
+
+        # normalize: [0,255] --> [0,1]
         tmpImg /= 255
-        if not gray:
+        if not gray:  # back to origin color
             imgYIQ = transformRGB2YIQ(imOrig)
             currImg = transformYIQ2RGB(np.dstack((tmpImg, imgYIQ[:, :, 1], imgYIQ[:, :, 2])))
             qImgList.append(currImg)
-        else:
+        else:  # gray
             qImgList.append(tmpImg)
 
     return qImgList, errorList
 
 
 def isGray(imgOrig: np.ndarray) -> (np.ndarray, bool):
+    """
+    if RGB -> convert to YIQ -> take Y
+    elif GRAY -> Y = imgOrig
+    :param imgOrig:
+    :return: y: graySale img, gray: True ig imgOrig was gray
+    """
     gray = True
     if len(imgOrig.shape) == 3:
         imgYIQ = transformRGB2YIQ(imgOrig)
