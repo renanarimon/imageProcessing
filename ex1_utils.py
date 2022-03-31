@@ -140,8 +140,14 @@ def quantizeImage(imOrig: np.ndarray, nQuant: int, nIter: int) -> (List[np.ndarr
         :param nIter: Number of optimization loops
         :return: (List[qImage_i],List[error_i])
     """
+
     qImgList = []
     errorList = []
+    # handle negative args
+    if nQuant < 1 or nIter < 1:
+        qImgList.append(imOrig)
+        errorList.append(0)
+        return qImgList, errorList
 
     # y: graySale img, gray: True ig imgOrig was gray
     y, gray = isGray(imOrig)
