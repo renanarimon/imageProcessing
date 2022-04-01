@@ -69,7 +69,7 @@ def gammaDisplay(img_path: str, rep: int):
 
 
 def main():
-    gammaDisplay('sinai.jpg', ex1_utils.LOAD_RGB)
+    gammaDisplay('beach.jpg', ex1_utils.LOAD_RGB)
 
 
 if __name__ == '__main__':

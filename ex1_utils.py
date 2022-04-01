@@ -146,6 +146,7 @@ def quantizeImage(imOrig: np.ndarray, nQuant: int, nIter: int) -> (List[np.ndarr
         :return: (List[qImage_i],List[error_i])
     """
 
+    counter = 0
     qImgList = []
     errorList = []
     # handle negative args
@@ -198,7 +199,11 @@ def quantizeImage(imOrig: np.ndarray, nQuant: int, nIter: int) -> (List[np.ndarr
         # calc MSE - break if there is convergence
         mse = (np.sqrt((imgNorm255 - tmpImg) ** 2)).mean()
         if len(errorList) > 0 and (errorList[-1] - mse) < sys.float_info.epsilon:
-            break
+            counter += 1
+            if counter > 10:
+                break
+        elif counter > 0:
+            counter -= 1
         errorList.append(mse)
 
         # normalize: [0,255] --> [0,1]

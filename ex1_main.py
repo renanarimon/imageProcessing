@@ -47,7 +47,7 @@ def quantDemo(img_path: str, rep: int):
 
 def main():
     print("ID:", myID())
-    img_path = 'sinai.jpg'
+    img_path = 'Prague_skyline_view.jpg'
 
     # Basic read and display
     imDisplay(img_path, LOAD_GRAY_SCALE)
