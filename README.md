@@ -35,6 +35,12 @@ gammaDisplay(): GUI for gamma correction. https://en.wikipedia.org/wiki/Gamma_co
     * gammaCorrect(): this func gets the desired gamma from trackbar, and by LUT makes the correct img. </br>
     0 = dark, 200 = bright <\br>
     Vout = pow(Vin,(1/gamma))<\br>
-    * getWidthHeight(): returns resized img width and height.
+    * getWidthHeight(): returns resized img width and height.</br>
+    
+https://user-images.githubusercontent.com/77155986/161232296-998381e7-8f13-4041-b788-727c74efe9fa.mp4
 
-python version: 3.8
+
+
+
+python version: Python 3.8.3
+
