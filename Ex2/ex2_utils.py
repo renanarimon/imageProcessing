@@ -139,6 +139,39 @@ def edgeDetectionZeroCrossingSimple(img: np.ndarray) -> np.ndarray:
 
     pass
 
+def edgeDetectionZeroCrossingLOG_over(img: np.ndarray) -> np.ndarray:
+    """
+    Detecting edges using "ZeroCrossingLOG" method
+    :param img: Input image
+    :return: my implementation
+    """
+    img = normalize(img)
+    LoG = nd.gaussian_laplace(img, 2)
+    threshold = np.absolute(LoG).mean() * 0.85
+    output = np.zeros_like(LoG)
+    w = output.shape[1]
+    h = output.shape[0]
+
+    neighbors = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+    for i in range(1, h-1):
+        for j in range(1, w-1):
+            if LoG[i, j] < 0:
+                for x, y in neighbors:
+                    if LoG[i + x, j + y] > 0:
+                        output[i, j] = 1
+                        break
+            elif LoG[i, j] > 0:
+                for x, y in neighbors:
+                    if LoG[i + x, j + y] < 0:
+                        output[i, j] = 1
+                        break
+            else:
+                if (LoG[i, j - 1] > 0 and LoG[i, j + 1] < 0) \
+                        or (LoG[i, j - 1] < 0 and LoG[i, j + 1] > 0) \
+                        or (LoG[i - 1, j] > 0 and LoG[i + 1, j] < 0) \
+                        or (LoG[i - 1, j] < 0 and LoG[i + 1, j] > 0):
+                    output[i, j] = 1
+    return output
 
 def edgeDetectionZeroCrossingLOG(img: np.ndarray) -> np.ndarray:
     """
@@ -147,28 +180,68 @@ def edgeDetectionZeroCrossingLOG(img: np.ndarray) -> np.ndarray:
     :return: my implementation
     """
     img = normalize(img)
-    LoG = nd.gaussian_laplace(img, 2)
+    LoG_img = nd.gaussian_laplace(img, 2)
+    threshold = np.absolute(LoG_img).mean() * 0.75
+    output = np.zeros_like(LoG_img)
+    (h, w) = output.shape
 
-    threshold = np.absolute(LoG).mean() * 0.75
-    output = np.zeros_like(LoG)
-    w = output.shape[1]
-    h = output.shape[0]
-
-    for y in range(1, h - 1):
-        for x in range(1, w - 1):
-            patch = LoG[y - 1:y + 2, x - 1:x + 2]
-            p = LoG[y, x]
-            maxP = patch.max()
-            minP = patch.min()
+    for i in range(1, h - 1):
+        for j in range(1, w - 1):
+            kernel = LoG_img[i - 1:i + 2, j - 1:j + 2]
+            p = LoG_img[i, j]
+            maxK = kernel.max()
+            minK = kernel.min()
             if p > 0:
-                zeroCross = True if minP < 0 else False
+                zeroCross = True if minK < 0 else False
             elif p < 0:
-                zeroCross = True if maxP > 0 else False
+                zeroCross = True if maxK > 0 else False
             else:
-                zeroCross = True if maxP > 0 and minP < 0 else False
-            if ((maxP - minP) > threshold) and zeroCross:
-                output[y, x] = 1
+                zeroCross = True if (maxK > 0 and minK < 0) else False
+            if ((maxK - minK) > threshold) and zeroCross:
+                output[i, j] = 1
+    return output
 
+
+def edgeDetectionZeroCrossingLOG_my_lap(img: np.ndarray) -> np.ndarray:
+    """
+    Detecting edges using "ZeroCrossingLOG" method
+    :param img: Input image
+    :return: my implementation
+    """
+    gaussian = np.array([[1 / 16., 1 / 8., 1 / 16.], [1 / 8., 1 / 4., 1 / 8.], [1 / 16., 1 / 8., 1 / 16.]])
+    laplacian = np.array([[1, 1, 1], [1, -8, 1], [1, 1, 1]])
+    log = laplacian * gaussian
+    img_log = cv2.filter2D(img, -1, log)
+
+    (h, w) = img_log.shape
+    border_size = 1
+    imgWithBorders = cv2.copyMakeBorder(
+        img_log,
+        top=border_size,
+        bottom=border_size,
+        left=border_size,
+        right=border_size,
+        borderType=cv2.BORDER_REPLICATE,
+    )
+    output = np.zeros_like(img_log)
+    for i in range(1, h):
+        for j in range(1, w):
+            if imgWithBorders[i, j] < 0:
+                for x, y in (-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1):
+                    if imgWithBorders[i + x, j + y] > 0:
+                        output[i, j] = 1
+                        break
+            elif imgWithBorders[i, j] > 0:
+                for x, y in (-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1):
+                    if imgWithBorders[i + x, j + y] < 0:
+                        output[i, j] = 1
+                        break
+            else:
+                if (imgWithBorders[i, j - 1] > 0 and imgWithBorders[i, j + 1] < 0) \
+                        or (imgWithBorders[i, j - 1] < 0 and imgWithBorders[i, j + 1] > 0)\
+                        or (imgWithBorders[i-1, j] > 0 and imgWithBorders[i+1, j] < 0) \
+                        or (imgWithBorders[i-1, j] < 0 and imgWithBorders[i+1, j] > 0):
+                    output[i, j] = 1
     return output
 
 

@@ -41,7 +41,7 @@ def edgeDemoSimple():
 
 
 def edgeDemoLOG():
-    img = cv2.imread('input/boxMan.jpg', cv2.IMREAD_GRAYSCALE) / 255
+    img = cv2.imread('input/beach.jpg', cv2.IMREAD_GRAYSCALE) / 255
     img = cv2.resize(img, (0, 0), fx=.25, fy=.25)
     edge_matrix = edgeDetectionZeroCrossingLOG(img)
 
