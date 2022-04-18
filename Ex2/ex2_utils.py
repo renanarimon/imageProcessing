@@ -139,6 +139,7 @@ def edgeDetectionZeroCrossingSimple(img: np.ndarray) -> np.ndarray:
 
     pass
 
+
 def edgeDetectionZeroCrossingLOG_over(img: np.ndarray) -> np.ndarray:
     """
     Detecting edges using "ZeroCrossingLOG" method
@@ -153,8 +154,8 @@ def edgeDetectionZeroCrossingLOG_over(img: np.ndarray) -> np.ndarray:
     h = output.shape[0]
 
     neighbors = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
-    for i in range(1, h-1):
-        for j in range(1, w-1):
+    for i in range(1, h - 1):
+        for j in range(1, w - 1):
             if LoG[i, j] < 0:
                 for x, y in neighbors:
                     if LoG[i + x, j + y] > 0:
@@ -172,6 +173,7 @@ def edgeDetectionZeroCrossingLOG_over(img: np.ndarray) -> np.ndarray:
                         or (LoG[i - 1, j] < 0 and LoG[i + 1, j] > 0):
                     output[i, j] = 1
     return output
+
 
 def edgeDetectionZeroCrossingLOG(img: np.ndarray) -> np.ndarray:
     """
@@ -238,9 +240,9 @@ def edgeDetectionZeroCrossingLOG_my_lap(img: np.ndarray) -> np.ndarray:
                         break
             else:
                 if (imgWithBorders[i, j - 1] > 0 and imgWithBorders[i, j + 1] < 0) \
-                        or (imgWithBorders[i, j - 1] < 0 and imgWithBorders[i, j + 1] > 0)\
-                        or (imgWithBorders[i-1, j] > 0 and imgWithBorders[i+1, j] < 0) \
-                        or (imgWithBorders[i-1, j] < 0 and imgWithBorders[i+1, j] > 0):
+                        or (imgWithBorders[i, j - 1] < 0 and imgWithBorders[i, j + 1] > 0) \
+                        or (imgWithBorders[i - 1, j] > 0 and imgWithBorders[i + 1, j] < 0) \
+                        or (imgWithBorders[i - 1, j] < 0 and imgWithBorders[i + 1, j] > 0):
                     output[i, j] = 1
     return output
 
@@ -255,11 +257,33 @@ def houghCircle(img: np.ndarray, min_radius: int, max_radius: int) -> list:
     :return: A list containing the detected circles,
                 [(x,y,radius),(x,y,radius),...]
     """
+    imgGauss = cv2.GaussianBlur(img, (9,9), 0)
+    imgEdge = cv2.Canny((imgGauss * 255).astype(np.uint8), 255, 255 / 3)
+    (h, w) = imgEdge.shape
+    rad_len = max_radius - min_radius
+    accumulator = np.zeros((h, w, rad_len))
+    for x in range(h):
+        for y in range(w):
+            if imgEdge[x, y] == 255:
+                for r in range(rad_len):
+                    for t in range(361):
+                        b = y - int(r * np.sin(t * np.pi / 180))
+                        a = x - int(r * np.cos(t * np.pi / 180))
+                        if 0 <= a < len(accumulator) and 0 <= b < len(accumulator):
+                            accumulator[a, b, r] += 1
+    circles = localMax(accumulator)
+    return circles
+
+
+def localMax(accumulator: np.ndarray) -> list:
+    threshold = (np.max(accumulator) / 3) * 2
+    x, y, r = np.where(accumulator >= threshold)
     circles = []
+    for i in range(len(x)):
+        if x[i] != 0 or y[i] != 0 or r[i] != 0:
+            circles.append((y[i], x[i], r[i]))
 
-    imgEdge = cv2.Canny((img * 255).astype(np.uint8), 255, 255 / 3)
-
-    pass
+    return circles
 
 
 def bilateral_filter_implement(in_image: np.ndarray, k_size: int, sigma_color: float, sigma_space: float) -> (

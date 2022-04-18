@@ -80,9 +80,9 @@ def houghDemo():
     for c in hough_rings:
         circle1 = plt.Circle((c[0], c[1]), c[2], color='r', fill=False, linewidth=3)
         ax.add_artist(circle1)
-    for c in cv2_cir[0]:
-        circle1 = plt.Circle((c[0], c[1]), c[2], color='g', fill=False, linewidth=2)
-        ax.add_artist(circle1)
+    # for c in cv2_cir[0]:
+    #     circle1 = plt.Circle((c[0], c[1]), c[2], color='g', fill=False, linewidth=2)
+    #     ax.add_artist(circle1)
     plt.show()
 
 
@@ -158,8 +158,8 @@ def main():
     # conv2Demo()
     # derivDemo()
     # blurDemo()
-    edgeDemo()
-    # houghDemo()
+    # edgeDemo()
+    houghDemo()
     # biliteralFilterDemo()
 
 
