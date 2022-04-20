@@ -249,97 +249,41 @@ def edgeDetectionZeroCrossingLOG_my_lap(img: np.ndarray) -> np.ndarray:
 
 
 def houghCircle(img: np.ndarray, min_radius: int, max_radius: int) -> list:
-    imgGauss = cv2.GaussianBlur(img, (9, 9), 0)
-    imgEdge = cv2.Canny((imgGauss * 255).astype(np.uint8), 255 / 3, 255)
-    (h, w) = imgEdge.shape
-    rad_len = max_radius - min_radius
+    img = cv2.GaussianBlur(img, (9, 9), 0)
+    img = cv2.Canny((img * 255).astype(np.uint8), 255 / 3, 255)
+    (h, w) = img.shape
     circles = []
     for r in range(min_radius, max_radius + 1):
         accumulator = np.zeros((h, w))
         for x in range(h):
             for y in range(w):
-                if imgEdge[x, y] == 255:
+                if img[x, y] == 255:
                     for t in range(1, 361):
                         b = y - int(r * np.sin(t * np.pi / 180))
                         a = x - int(r * np.cos(t * np.pi / 180))
                         if 0 <= a < h and 0 <= b < w:
                             accumulator[a, b] += 1
-        localMax2(accumulator, circles, r)
-
+        localMax(accumulator, circles, r)
     return circles
 
 
-def houghCircle1(img: np.ndarray, min_radius: int, max_radius: int) -> list:
-    """
-    Find Circles in an image using a Hough Transform algorithm extension
-    To find Edges you can Use OpenCV function: cv2.Canny
-    :param img: Input image
-    :param min_radius: Minimum circle radius
-    :param max_radius: Maximum circle radius
-    :return: A list containing the detected circles,
-                [(x,y,radius),(x,y,radius),...]
-    """
-    imgGauss = cv2.GaussianBlur(img, (9, 9), 0)
-    imgEdge = cv2.Canny((imgGauss * 255).astype(np.uint8), 255 / 3, 255)
-    (h, w) = imgEdge.shape
-    rad_len = max_radius - min_radius
-    accumulator = np.zeros((h, w, rad_len + 1))
-    for x in range(h):
-        for y in range(w):
-            if imgEdge[x, y] == 255:
-                for r in range(min_radius, max_radius + 1):
-                    for t in range(361):
-                        b = y - int(r * np.sin(t * np.pi / 180))
-                        a = x - int(r * np.cos(t * np.pi / 180))
-                        if 0 <= a < len(accumulator) and 0 <= b < len(accumulator):
-                            accumulator[a, b, r - min_radius] += 1
-    circles = localMax(accumulator)
-    return circles
-
-
-def localMax(accumulator: np.ndarray) -> list:
-    threshold = (np.max(accumulator) / 3) * 2
-    x, y, r = np.where(accumulator >= threshold)
-    circles = []
-    for i in range(len(x)):
-        if x[i] != 0 or y[i] != 0 or r[i] != 0:
-            circles.append((y[i], x[i], r[i]))
-
-    return circles
-
-
-def localMax1(accumulator: np.ndarray, circles: list, radius: int):
-    neighbors_size = (5, 5)
-    threshold = np.max(accumulator) * 0.8
-    tmp_max = filters.maximum_filter(accumulator, neighbors_size)
-    maxima = (accumulator == tmp_max)
-    tmp_min = filters.minimum_filter(accumulator, neighbors_size)
-    diff = ((tmp_max - tmp_min) > threshold)
-    maxima[diff is False] = False
-
-    (h, w) = accumulator.shape
-    for i in range(h):
-        for j in range(w):
-            if maxima[i, j]:
-                circles.append((j, i, radius))
-
-
-def localMax2(accumulator: np.ndarray, circles: list, radius: int):
-    neighbors_size = (5, 5)
+def localMax(accumulator: np.ndarray, circles: list, radius: int):
+    neighbors_size = (5, 5)  # 5,5 / 4,4
     threshold = np.max(accumulator) * 0.8
     tmp_max = filters.maximum_filter(accumulator, neighbors_size)
     zeros = np.zeros_like(tmp_max)
     maxima = np.where(tmp_max == accumulator, tmp_max, zeros)
     tmp_min = filters.minimum_filter(accumulator, neighbors_size)
     diff = ((tmp_max - tmp_min) > threshold)
-    maxima[diff is False] = 0
+    maxima[diff == 0] = 0
+    print("count: ", np.count_nonzero(maxima))
 
     (h, w) = accumulator.shape
     for i in range(h):
         for j in range(w):
-            if maxima[i, j]:
+            if maxima[i, j] > threshold:
                 circles.append((j, i, radius))
-
+    print("list: ", len(circles))
 
 
 def bilateral_filter_implement(in_image: np.ndarray, k_size: int, sigma_color: float, sigma_space: float) -> (
