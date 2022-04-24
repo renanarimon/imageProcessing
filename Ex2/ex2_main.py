@@ -159,14 +159,9 @@ def main():
     # derivDemo()
     # blurDemo()
     # edgeDemo()
-    houghDemo()
-    # biliteralFilterDemo()
+    # houghDemo()
+    biliteralFilterDemo()
 
-    # arr = np.zeros((10,10))
-    # a = np.zeros((10,10))
-    # arr[5,6] = 1
-    # x = np.where(arr==1, arr, a)
-    # print(x)
 
 
 if __name__ == '__main__':

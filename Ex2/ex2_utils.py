@@ -295,5 +295,34 @@ def bilateral_filter_implement(in_image: np.ndarray, k_size: int, sigma_color: f
     :param sigma_space: represents the filter sigma in the coordinate.
     :return: OpenCV implementation, my implementation
     """
+    ans_img = np.zeros_like(in_image)
+    border_size = int(np.floor(k_size / 2))
+    imgWithBorders = cv2.copyMakeBorder(
+        in_image,
+        top=border_size,
+        bottom=border_size,
+        left=border_size,
+        right=border_size,
+        borderType=cv2.BORDER_REPLICATE,
+    )
+    if k_size % 2 != 0:
+        gaus = cv2.getGaussianKernel(k_size, 1)
+    else:
+        gaus = cv2.getGaussianKernel(k_size + 1, 1)
+    gaus = gaus@gaus.T
 
-    return
+    (h, w) = in_image.shape
+    for i in range(h):
+        for j in range(w):
+            pivot_v = imgWithBorders[i, j]
+            neighborhood = imgWithBorders[
+                         i: i + k_size,
+                         j: j + k_size
+                         ]
+            diff = pivot_v - neighborhood
+            diff_gaus = np.exp(-np.power(diff, 2) / (2 * sigma_color))
+            combo = gaus * diff_gaus
+            ans_img[i, j] = (combo * neighborhood / combo.sum()).sum()
+    cvResult = cv2.bilateralFilter(in_image, k_size, sigmaColor=sigma_color, sigmaSpace=sigma_space)
+
+    return cvResult, ans_img
