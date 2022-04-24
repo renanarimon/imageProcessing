@@ -249,28 +249,45 @@ def edgeDetectionZeroCrossingLOG_my_lap(img: np.ndarray) -> np.ndarray:
 
 
 def houghCircle(img: np.ndarray, min_radius: int, max_radius: int) -> list:
-    img = cv2.GaussianBlur(img, (9, 9), 0)
-    img = cv2.Canny((img * 255).astype(np.uint8), 255 / 3, 255)
+    """
+    Find Circles in an image using a Hough Transform algorithm extension
+    To find Edges you can Use OpenCV function: cv2.Canny
+    :param img: Input image
+    :param min_radius: Minimum circle radius
+    :param max_radius: Maximum circle radius
+    :return: A list containing the detected circles,
+                [(x,y,radius),(x,y,radius),...]
+    """
+
+    img = cv2.GaussianBlur(img, (9, 9), 0) # blur
+    img = cv2.Canny((img * 255).astype(np.uint8), 255 / 3, 255) # edges
     (h, w) = img.shape
-    circles = []
+    circles = [] # list of circles from all iterations
     for r in range(min_radius, max_radius + 1):
-        accumulator = np.zeros((h, w))
+        accumulator = np.zeros((h, w)) # 2D arr to vote for the circles centers
         for x in range(h):
             for y in range(w):
-                if img[x, y] == 255:
-                    for t in range(1, 361):
+                if img[x, y] == 255: # edge pixel
+                    for t in range(1, 361): # thetas
                         b = y - int(r * np.sin(t * np.pi / 180))
                         a = x - int(r * np.cos(t * np.pi / 180))
-                        if 0 <= a < h and 0 <= b < w:
+                        if 0 <= a < h and 0 <= b < w: # if in borders
                             accumulator[a, b] += 1
         localMax(accumulator, circles, r)
     return circles
 
 
 def localMax(accumulator: np.ndarray, circles: list, radius: int):
-    neighbors_size = (5, 5)  # 5,5 / 4,4
+    """
+    find the local maximums in the accumulator
+    :param accumulator:
+    :param circles:
+    :param radius: curr radius
+    :return: none
+    """
+    neighbors_size = (5, 5)
     threshold = np.max(accumulator) * 0.8
-    tmp_max = filters.maximum_filter(accumulator, neighbors_size)
+    tmp_max = filters.maximum_filter(accumulator, neighbors_size) # makes all neighbors the maximum
     zeros = np.zeros_like(tmp_max)
     maxima = np.where(tmp_max == accumulator, tmp_max, zeros)
     tmp_min = filters.minimum_filter(accumulator, neighbors_size)
@@ -295,9 +312,9 @@ def bilateral_filter_implement(in_image: np.ndarray, k_size: int, sigma_color: f
     :param sigma_space: represents the filter sigma in the coordinate.
     :return: OpenCV implementation, my implementation
     """
-    ans_img = np.zeros_like(in_image)
+    ans_img = np.zeros_like(in_image) # changing filter -> cannot change the origin
     border_size = int(np.floor(k_size / 2))
-    imgWithBorders = cv2.copyMakeBorder(
+    imgWithBorders = cv2.copyMakeBorder( # pad image
         in_image,
         top=border_size,
         bottom=border_size,
@@ -305,14 +322,14 @@ def bilateral_filter_implement(in_image: np.ndarray, k_size: int, sigma_color: f
         right=border_size,
         borderType=cv2.BORDER_REPLICATE,
     )
-    if k_size % 2 != 0:
+    if k_size % 2 != 0: # k_size must be odd
         gaus = cv2.getGaussianKernel(k_size, 1)
     else:
         gaus = cv2.getGaussianKernel(k_size + 1, 1)
     gaus = gaus@gaus.T
 
     (h, w) = in_image.shape
-    for i in range(h):
+    for i in range(h): # for each pixel apply filter
         for j in range(w):
             pivot_v = imgWithBorders[i, j]
             neighborhood = imgWithBorders[
@@ -322,7 +339,7 @@ def bilateral_filter_implement(in_image: np.ndarray, k_size: int, sigma_color: f
             diff = pivot_v - neighborhood
             diff_gaus = np.exp(-np.power(diff, 2) / (2 * sigma_color))
             combo = gaus * diff_gaus
-            ans_img[i, j] = (combo * neighborhood / combo.sum()).sum()
-    cvResult = cv2.bilateralFilter(in_image, k_size, sigmaColor=sigma_color, sigmaSpace=sigma_space)
+            ans_img[i, j] = (combo * neighborhood / combo.sum()).sum() # insert to ans_img
+    cvResult = cv2.bilateralFilter(in_image, k_size, sigmaColor=sigma_color, sigmaSpace=sigma_space) # cv implementation
 
     return cvResult, ans_img
