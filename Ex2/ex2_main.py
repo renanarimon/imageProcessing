@@ -59,11 +59,11 @@ def edgeDemo():
 
 
 def houghDemo():
-    img = cv2.imread('input/pool_balls.jpg', cv2.IMREAD_GRAYSCALE) / 255
-    min_r, max_r = 10, 20
+    # img = cv2.imread('input/pool_balls.jpg', cv2.IMREAD_GRAYSCALE) / 255
+    # min_r, max_r = 10, 20
 
-    # img = cv2.imread('input/coins.jpg', cv2.IMREAD_GRAYSCALE) / 255
-    # min_r, max_r = 50, 100
+    img = cv2.imread('input/coins.jpg', cv2.IMREAD_GRAYSCALE) / 255
+    min_r, max_r = 50, 100
 
     st = time.time()
     cv2_cir = cv2.HoughCircles((img * 255).astype(np.uint8), cv2.HOUGH_GRADIENT, 1, minDist=30, param1=500,
