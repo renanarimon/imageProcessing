@@ -190,7 +190,7 @@ def edgeDetectionZeroCrossingLOG1(img: np.ndarray) -> np.ndarray:
     return output
 
 
-def houghCircle(img: np.ndarray, min_radius: int, max_radius: int) -> list:
+def houghCircle1(img: np.ndarray, min_radius: int, max_radius: int) -> list:
     """
     Find Circles in an image using a Hough Transform algorithm extension
     To find Edges you can Use OpenCV function: cv2.Canny
@@ -219,6 +219,7 @@ def houghCircle(img: np.ndarray, min_radius: int, max_radius: int) -> list:
     return circles
 
 
+
 def localMax(accumulator: np.ndarray, circles: list, radius: int):
     """
     find the local maximums in the accumulator
@@ -244,6 +245,47 @@ def localMax(accumulator: np.ndarray, circles: list, radius: int):
     print("list: ", len(circles))
 
 
+def houghCircle(img: np.ndarray, min_radius: int, max_radius: int) -> list:
+    try:
+        edge_img = cv2.Canny((img * 255).astype(np.uint8), 50, 250)
+        (h, w) = edge_img.shape
+        edges = []
+        circlesPoints = []
+        circlesResult = []
+        accumulator = {}
+        threshold = 0.4
+        thetas = 100
+
+        for i in range(h):
+            for j in range(w):
+                if edge_img[i, j] == 255:
+                    edges.append((i, j))
+
+        for r in range(min_radius, max_radius + 1):
+            for t in range(1, thetas):
+                angle = (2 * np.pi * t) / thetas
+                x = int(r * np.cos(angle))
+                y = int(r * np.sin(angle))
+                circlesPoints.append((x, y, r))
+
+        for i, j in edges:
+            for x, y, r in circlesPoints:
+                a = j - y
+                b = i - x
+                vote = accumulator.get((a, b, r))
+                if vote is None:
+                    vote = 0
+                accumulator[(a, b, r)] = vote + 1
+
+        sortedAccumulator = sorted(accumulator.items(), key=lambda k: -k[1])
+        for (x, y, r), s in sortedAccumulator:
+            if s / 100 >= threshold and all((x - xc) ** 2 + (y - yc) * 2 > rc ** 2 for xc, yc, rc in circlesResult):
+                circlesResult.append((x, y, r))
+        return circlesResult
+    except Exception as e:
+        print(e)
+
+
 def bilateral_filter_implement(in_image: np.ndarray, k_size: int, sigma_color: float, sigma_space: float) -> (
         np.ndarray, np.ndarray):
     """
@@ -253,6 +295,7 @@ def bilateral_filter_implement(in_image: np.ndarray, k_size: int, sigma_color: f
     :param sigma_space: represents the filter sigma in the coordinate.
     :return: OpenCV implementation, my implementation
     """
+    in_image = normalize(in_image)
     ans_img = np.zeros_like(in_image)  # changing filter -> cannot change the origin
     border_size = int(np.floor(k_size // 2))
     imgWithBorders = cv2.copyMakeBorder(  # pad image

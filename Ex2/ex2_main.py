@@ -149,6 +149,7 @@ def biliteralFilterDemo():
     filtered_image_CV, filtered_image_my = bilateral_filter_implement(img, 9, 8.0, 16.0)
     cv2.imwrite("filtered_image_OpenCV.jpg", filtered_image_CV)
     cv2.imwrite("filtered_image_my.jpg", filtered_image_my)
+    print(MSE(filtered_image_my, filtered_image_CV))
 
 
 def main():
@@ -157,8 +158,8 @@ def main():
     # derivDemo()
     # blurDemo()
     # edgeDemo()
-    # houghDemo()
-    biliteralFilterDemo()
+    houghDemo()
+    # biliteralFilterDemo()
 
 
 if __name__ == '__main__':
