@@ -92,8 +92,8 @@ def create_gaussian_kernel(k_size: int):
     for i in range(1, k_size - 1):
         kernel = conv1D(kernel, ones)
     kernel = kernel.reshape([k_size, -1])
-    kernel = (kernel * kernel.T) / np.sum(kernel)  # make 2D & normalize
-    return kernel
+    kernel = kernel * kernel.T  # make 2D
+    return kernel / np.sum(kernel)  # normalize
 
 
 def blurImage1(in_image: np.ndarray, k_size: int) -> np.ndarray:
@@ -116,7 +116,6 @@ def blurImage2(in_image: np.ndarray, k_size: int) -> np.ndarray:
     """
     k = cv2.getGaussianKernel(k_size, 1)
     kernel = k * k.T
-
     return cv2.filter2D(in_image, -1, kernel)
 
 
