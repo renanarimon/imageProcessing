@@ -190,7 +190,7 @@ def edgeDetectionZeroCrossingLOG1(img: np.ndarray) -> np.ndarray:
     return output
 
 
-def houghCircle1(img: np.ndarray, min_radius: int, max_radius: int) -> list:
+def houghCircle(img: np.ndarray, min_radius: int, max_radius: int) -> list:
     """
     Find Circles in an image using a Hough Transform algorithm extension
     To find Edges you can Use OpenCV function: cv2.Canny
@@ -200,67 +200,23 @@ def houghCircle1(img: np.ndarray, min_radius: int, max_radius: int) -> list:
     :return: A list containing the detected circles,
                 [(x,y,radius),(x,y,radius),...]
     """
-
-    img = cv2.GaussianBlur(img, (9, 9), 0)  # blur
-    img = cv2.Canny((img * 255).astype(np.uint8), 255 / 3, 255)  # edges
-    (h, w) = img.shape
-    circles = []  # list of circles from all iterations
-    for r in range(min_radius, max_radius + 1):
-        accumulator = np.zeros((h, w))  # 2D arr to vote for the circles centers
-        for x in range(h):
-            for y in range(w):
-                if img[x, y] == 255:  # edge pixel
-                    for t in range(1, 361, 5):  # thetas
-                        b = y - int(r * np.sin(t * np.pi / 180))
-                        a = x - int(r * np.cos(t * np.pi / 180))
-                        if 0 <= a < h and 0 <= b < w:  # if in borders
-                            accumulator[a, b] += 1
-        localMax(accumulator, circles, r)
-    return circles
-
-
-
-def localMax(accumulator: np.ndarray, circles: list, radius: int):
-    """
-    find the local maximums in the accumulator
-    :param accumulator:
-    :param circles:
-    :param radius: curr radius
-    :return: none
-    """
-    neighbors_size = (5, 5)
-    threshold = np.max(accumulator) * 0.8
-    tmp_max = filters.maximum_filter(accumulator, neighbors_size)  # makes all neighbors the maximum
-    maxima = np.where(tmp_max == accumulator, tmp_max, 0)
-    tmp_min = filters.minimum_filter(accumulator, neighbors_size)
-    diff = ((tmp_max - tmp_min) > threshold)
-    maxima[diff == 0] = 0
-    print("count: ", np.count_nonzero(maxima))
-
-    (h, w) = accumulator.shape
-    for i in range(h):
-        for j in range(w):
-            if maxima[i, j] > threshold:
-                circles.append((j, i, radius))
-    print("list: ", len(circles))
-
-
-def houghCircle(img: np.ndarray, min_radius: int, max_radius: int) -> list:
     try:
-        edge_img = cv2.Canny((img * 255).astype(np.uint8), 50, 250)
+        edge_img = cv2.Canny((img * 255).astype(np.uint8), 50, 250)  # get edge img by canny
         (h, w) = edge_img.shape
-        edges = []
-        circlesPoints = []
-        circlesResult = []
-        accumulator = {}
+        edges = []  # edge pixels
+        circlesPoints = []  # (x, y, r): points on circles according to given radius
+        circlesResult = []  # detected circles
+        accumulator = {}  # vote for each pixel
         threshold = 0.4
         thetas = 100
 
+        # save edge pixels
         for i in range(h):
             for j in range(w):
                 if edge_img[i, j] == 255:
                     edges.append((i, j))
 
+        # (x, y, r): points on circles according to given radius
         for r in range(min_radius, max_radius + 1):
             for t in range(1, thetas):
                 angle = (2 * np.pi * t) / thetas
@@ -268,18 +224,19 @@ def houghCircle(img: np.ndarray, min_radius: int, max_radius: int) -> list:
                 y = int(r * np.sin(angle))
                 circlesPoints.append((x, y, r))
 
+        # vote for each pixel
         for i, j in edges:
             for x, y, r in circlesPoints:
                 a = j - y
                 b = i - x
                 vote = accumulator.get((a, b, r))
-                if vote is None:
+                if vote is None:  # point has no votes yet
                     vote = 0
-                accumulator[(a, b, r)] = vote + 1
+                accumulator[(a, b, r)] = vote + 1  # vote++
 
         sortedAccumulator = sorted(accumulator.items(), key=lambda k: -k[1])
         for (x, y, r), s in sortedAccumulator:
-            if s / 100 >= threshold and all((x - xc) ** 2 + (y - yc) * 2 > rc ** 2 for xc, yc, rc in circlesResult):
+            if s / 100 >= threshold and all((x - x1) ** 2 + (y - y1) * 2 > r1 ** 2 for x1, y1, r1 in circlesResult):
                 circlesResult.append((x, y, r))
         return circlesResult
     except Exception as e:
@@ -307,10 +264,10 @@ def bilateral_filter_implement(in_image: np.ndarray, k_size: int, sigma_color: f
         borderType=cv2.BORDER_REPLICATE,
     )
     if k_size % 2 != 0:  # k_size must be odd
-        gaus = cv2.getGaussianKernel(k_size, 1)
+        gauss = cv2.getGaussianKernel(k_size, 1)
     else:
-        gaus = cv2.getGaussianKernel(k_size + 1, 1)
-    gaus = gaus @ gaus.T
+        gauss = cv2.getGaussianKernel(k_size + 1, 1)
+    gauss = gauss @ gauss.T
 
     (h, w) = in_image.shape
     for i in range(h):  # for each pixel apply filter
@@ -320,9 +277,10 @@ def bilateral_filter_implement(in_image: np.ndarray, k_size: int, sigma_color: f
                            i: i + k_size,
                            j: j + k_size
                            ]
+
             diff = pivot_v - neighborhood
-            diff_gaus = np.exp(-np.power(diff, 2) / (2 * sigma_color))
-            combo = gaus * diff_gaus
+            diff_gauss = np.exp(-np.power(diff, 2) / (2 * sigma_color))
+            combo = gauss * diff_gauss
             ans_img[i, j] = (combo * neighborhood / combo.sum()).sum()  # insert to ans_img
     cvResult = cv2.bilateralFilter(in_image, k_size, sigmaColor=sigma_color,
                                    sigmaSpace=sigma_space)  # cv implementation
