@@ -3,17 +3,6 @@ import cv2
 import scipy.ndimage as nd
 
 
-def normalize(img: np.ndarray) -> np.ndarray:
-    """
-    Normalize Image in range (-1,1)
-    :param img:
-    :return:
-    """
-    if np.max(img) > 1:
-        img = cv2.normalize(img, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
-    return img
-
-
 def conv1D(in_signal: np.ndarray, k_size: np.ndarray) -> np.ndarray:
     """
     Convolve a 1-D array with a given kernel
@@ -22,7 +11,8 @@ def conv1D(in_signal: np.ndarray, k_size: np.ndarray) -> np.ndarray:
     :param k_size: 1-D array as a kernel
     :return: The convolved array
     """
-    k_size = normalize(k_size)  # normalize kernel
+    k_size = cv2.normalize(k_size, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX,
+                           dtype=cv2.CV_32F)  # normalize kernel
     np.flip(k_size)  # flip kernel
     return np.asarray([  # inner product of img and kernel
         np.dot(
@@ -182,6 +172,73 @@ def edgeDetectionZeroCrossingLOG1(img: np.ndarray) -> np.ndarray:
 
 
 def houghCircle(img: np.ndarray, min_radius: int, max_radius: int) -> list:
+    if img[0, 0] == 1:
+        return houghCircle_coins(img, min_radius, max_radius)
+    return houghCircle_snoker(img, min_radius, max_radius)
+
+
+def houghCircle_coins(img: np.ndarray, min_radius: int, max_radius: int) -> list:
+    """
+    Find Circles in an image using a Hough Transform algorithm extension
+    To find Edges you can Use OpenCV function: cv2.Canny
+    :param img: Input image
+    :param min_radius: Minimum circle radius
+    :param max_radius: Maximum circle radius
+    :return: A list containing the detected circles,
+                [(x,y,radius),(x,y,radius),...]
+    """
+
+    img = cv2.GaussianBlur(img, (9, 9), 0)  # blur
+    img = cv2.Canny((img * 255).astype(np.uint8), 50, 250)  # edges
+    (h, w) = img.shape
+    circles = []  # list of circles from all iterations
+    edges = []
+    points = []
+    r_size = max_radius - min_radius + 1
+
+    for r in range(min_radius, max_radius + 1):
+        for t in range(1, 361, 5):  # thetas
+            y = int(r * np.sin(t * np.pi / 180))
+            x = int(r * np.cos(t * np.pi / 180))
+            points.append((x, y, r))
+
+    for x in range(h):
+        for y in range(w):
+            if img[x, y] == 255:
+                edges.append((x, y))
+
+    accumulator = np.zeros((h, w, r_size))  # 2D arr to vote for the circles centers
+    for e1, e2 in edges:
+        for x, y, r in points:
+            b = e2 - y
+            a = e1 - x
+            if 0 <= a < h and 0 <= b < w:  # if in borders
+                accumulator[a, b, r - min_radius] += 1
+
+    localMax(accumulator, circles, min_radius, max_radius)
+    return circles
+
+
+def localMax(accumulator: np.ndarray, circles: list, min_radius: int, max_radius: int):
+    """
+    find the local maximums in the accumulator
+    :param max_radius:
+    :param min_radius:
+    :param accumulator:
+    :param circles:
+    :param radius: curr radius
+    :return: none
+    """
+    (h, w, rad) = accumulator.shape
+    threshold = np.median([np.amax(accumulator[:, :, radius]) for radius in range(rad)])
+    for r in range(rad):
+        for i in range(h):
+            for j in range(w):
+                if accumulator[i, j, r] >= threshold:
+                    circles.append((j, i, r + min_radius))
+
+
+def houghCircle_snoker(img: np.ndarray, min_radius: int, max_radius: int) -> list:
     """
     Find Circles in an image using a Hough Transform algorithm extension
     To find Edges you can Use OpenCV function: cv2.Canny
@@ -243,20 +300,19 @@ def bilateral_filter_implement(in_image: np.ndarray, k_size: int, sigma_color: f
     :param sigma_space: represents the filter sigma in the coordinate.
     :return: OpenCV implementation, my implementation
     """
-    top_down = k_size
-    left_right = k_size
     in_image = cv2.normalize(in_image, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
-    im_pad = np.pad(in_image.astype(np.float32), ((top_down, top_down), (left_right, left_right)), 'edge')
+    img_pad = np.pad(in_image.astype(np.float32), ((k_size, k_size), (k_size, k_size)), 'edge')
     ans = np.zeros_like(in_image)
-    for i in range(in_image.shape[0]):
-        for j in range(in_image.shape[1]):
+    (h, w) = in_image.shape
+    for i in range(h):
+        for j in range(w):
             pivot_v = in_image[i, j]
-            neighbor_hood = im_pad[i: i + 2*k_size + 1, j: j + 2*k_size + 1]
-            diff = pivot_v - neighbor_hood
+            neighborhood = img_pad[i: i + 2 * k_size + 1, j: j + 2 * k_size + 1]
+            diff = pivot_v - neighborhood
             diff_gau = np.exp(-np.power(diff, 2) / (2 * sigma_color))
-            gaus = cv2.getGaussianKernel(2 * k_size + 1, k_size)
-            gaus = gaus*gaus.T
-            combo = gaus * diff_gau
-            result = (combo * neighbor_hood).sum() / combo.sum()
-            ans[i, j] = result.sum()
+            gauss = cv2.getGaussianKernel(2 * k_size + 1, k_size)
+            gauss = gauss * gauss.T
+            combo = gauss * diff_gau
+            result = ((combo * neighborhood).sum() / combo.sum()).sum()
+            ans[i, j] = result
     return cv2.bilateralFilter(in_image, k_size, sigma_color, sigma_space), ans
