@@ -1,14 +1,6 @@
-import math
-from random import random
-
 import numpy as np
 import cv2
-from scipy.ndimage import gaussian_filter
-import sklearn.preprocessing as sk
-
-import scipy as sp
 import scipy.ndimage as nd
-import scipy.ndimage.filters as filters
 
 
 def normalize(img: np.ndarray) -> np.ndarray:
@@ -251,37 +243,20 @@ def bilateral_filter_implement(in_image: np.ndarray, k_size: int, sigma_color: f
     :param sigma_space: represents the filter sigma in the coordinate.
     :return: OpenCV implementation, my implementation
     """
-    in_image = normalize(in_image)
-    ans_img = np.zeros_like(in_image)  # changing filter -> cannot change the origin
-    border_size = int(np.floor(k_size // 2))
-    imgWithBorders = cv2.copyMakeBorder(  # pad image
-        in_image,
-        top=border_size,
-        bottom=border_size,
-        left=border_size,
-        right=border_size,
-        borderType=cv2.BORDER_REPLICATE,
-    )
-    if k_size % 2 != 0:  # k_size must be odd
-        gauss = cv2.getGaussianKernel(k_size, 1)
-    else:
-        gauss = cv2.getGaussianKernel(k_size + 1, 1)
-    gauss = gauss @ gauss.T
-
-    (h, w) = in_image.shape
-    for i in range(h):  # for each pixel apply filter
-        for j in range(w):
-            pivot_v = imgWithBorders[i, j]
-            neighborhood = imgWithBorders[
-                           i: i + k_size,
-                           j: j + k_size
-                           ]
-
-            diff = pivot_v - neighborhood
-            diff_gauss = np.exp(-np.power(diff, 2) / (2 * sigma_color))
-            combo = gauss * diff_gauss
-            ans_img[i, j] = (combo * neighborhood / combo.sum()).sum()  # insert to ans_img
-    cvResult = cv2.bilateralFilter(in_image, k_size, sigmaColor=sigma_color,
-                                   sigmaSpace=sigma_space)  # cv implementation
-
-    return cvResult, ans_img
+    top_down = k_size
+    left_right = k_size
+    in_image = cv2.normalize(in_image, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+    im_pad = np.pad(in_image.astype(np.float32), ((top_down, top_down), (left_right, left_right)), 'edge')
+    ans = np.zeros_like(in_image)
+    for i in range(in_image.shape[0]):
+        for j in range(in_image.shape[1]):
+            pivot_v = in_image[i, j]
+            neighbor_hood = im_pad[i: i + 2*k_size + 1, j: j + 2*k_size + 1]
+            diff = pivot_v - neighbor_hood
+            diff_gau = np.exp(-np.power(diff, 2) / (2 * sigma_color))
+            gaus = cv2.getGaussianKernel(2 * k_size + 1, k_size)
+            gaus = gaus*gaus.T
+            combo = gaus * diff_gau
+            result = (combo * neighbor_hood).sum() / combo.sum()
+            ans[i, j] = result.sum()
+    return cv2.bilateralFilter(in_image, k_size, sigma_color, sigma_space), ans
