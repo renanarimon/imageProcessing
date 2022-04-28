@@ -205,6 +205,7 @@ def localMax(accumulator: np.ndarray, circles: list, min_radius: int, max_radius
             for j in range(w):
                 if accumulator[i, j, r] >= threshold:
                     circles.append((j, i, r + min_radius))
+    print("threshold: ", threshold)
 
 
 def houghCircle_snoker(img: np.ndarray, min_radius: int, max_radius: int) -> list:
@@ -246,6 +247,7 @@ def houghCircle_snoker(img: np.ndarray, min_radius: int, max_radius: int) -> lis
         for (x, y, r), s in sortedAccumulator:
             if s / 100 >= threshold and all((x - x1) ** 2 + (y - y1) * 2 > r1 ** 2 for x1, y1, r1 in circlesResult):
                 circlesResult.append((x, y, r))
+        print("threshold: ", threshold)
         return circlesResult
     except Exception as e:
         print(e)
