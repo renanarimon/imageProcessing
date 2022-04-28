@@ -36,11 +36,8 @@ def conv2Demo():
     print("Max Error: {}".format(np.abs(c_img - cv_img).max() * 255))
 
     f, ax = plt.subplots(1, 3)
-    ax[0].title("my_implementation")
     ax[0].imshow(c_img)
-    ax[1].title("diff")
     ax[1].imshow(cv_img - c_img)
-    ax[2].title("cv2_implementation")
     ax[2].imshow(cv_img)
     plt.show()
 
@@ -168,12 +165,12 @@ def myID():
 def main():
     print("ID:", myID())
     conv1Demo()
-    # conv2Demo()
-    # derivDemo()
-    # blurDemo()
-    # edgeDemo()
-    # houghDemo()
-    # biliteralFilterDemo()
+    conv2Demo()
+    derivDemo()
+    blurDemo()
+    edgeDemo()
+    houghDemo()
+    biliteralFilterDemo()
 
 
 if __name__ == '__main__':

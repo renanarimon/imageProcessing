@@ -142,12 +142,6 @@ def edgeDetectionZeroCrossingLOG(img: np.ndarray) -> np.ndarray:
 
 
 def houghCircle(img: np.ndarray, min_radius: int, max_radius: int) -> list:
-    if img[0, 0] == 1:
-        return houghCircle_coins(img, min_radius, max_radius)
-    return houghCircle_snoker(img, min_radius, max_radius)
-
-
-def houghCircle_coins(img: np.ndarray, min_radius: int, max_radius: int) -> list:
     """
     Find Circles in an image using a Hough Transform algorithm extension
     To find Edges you can Use OpenCV function: cv2.Canny
@@ -157,7 +151,12 @@ def houghCircle_coins(img: np.ndarray, min_radius: int, max_radius: int) -> list
     :return: A list containing the detected circles,
                 [(x,y,radius),(x,y,radius),...]
     """
+    if img[0, 0] == 1:
+        return houghCircle_coins(img, min_radius, max_radius)
+    return houghCircle_snoker(img, min_radius, max_radius)
 
+
+def houghCircle_coins(img: np.ndarray, min_radius: int, max_radius: int) -> list:
     img = cv2.GaussianBlur(img, (9, 9), 0)  # blur
     img = cv2.Canny((img * 255).astype(np.uint8), 50, 250)  # edges
     (h, w) = img.shape
@@ -209,15 +208,6 @@ def localMax(accumulator: np.ndarray, circles: list, min_radius: int, max_radius
 
 
 def houghCircle_snoker(img: np.ndarray, min_radius: int, max_radius: int) -> list:
-    """
-    Find Circles in an image using a Hough Transform algorithm extension
-    To find Edges you can Use OpenCV function: cv2.Canny
-    :param img: Input image
-    :param min_radius: Minimum circle radius
-    :param max_radius: Maximum circle radius
-    :return: A list containing the detected circles,
-                [(x,y,radius),(x,y,radius),...]
-    """
     try:
         edge_img = cv2.Canny((img * 255).astype(np.uint8), 50, 250)  # get edge img by canny
         (h, w) = edge_img.shape
