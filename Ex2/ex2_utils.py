@@ -143,34 +143,6 @@ def edgeDetectionZeroCrossingLOG(img: np.ndarray) -> np.ndarray:
     return ans_img
 
 
-def edgeDetectionZeroCrossingLOG1(img: np.ndarray) -> np.ndarray:
-    """
-    Detecting edges using "ZeroCrossingLOG" method
-    :param img: Input image
-    :return: my implementation
-    """
-    LoG_img = nd.gaussian_laplace(img, 2)
-    threshold = np.absolute(LoG_img).mean() * 0.75
-    output = np.zeros_like(LoG_img)
-    (h, w) = output.shape
-
-    for i in range(1, h - 1):
-        for j in range(1, w - 1):
-            kernel = LoG_img[i - 1:i + 2, j - 1:j + 2]
-            p = LoG_img[i, j]
-            maxK = kernel.max()
-            minK = kernel.min()
-            if p > 0:
-                zeroCross = True if minK < 0 else False
-            elif p < 0:
-                zeroCross = True if maxK > 0 else False
-            else:
-                zeroCross = True if (maxK > 0 and minK < 0) else False
-            if ((maxK - minK) > threshold) and zeroCross:
-                output[i, j] = 1
-    return output
-
-
 def houghCircle(img: np.ndarray, min_radius: int, max_radius: int) -> list:
     if img[0, 0] == 1:
         return houghCircle_coins(img, min_radius, max_radius)
