@@ -11,8 +11,6 @@ def conv1D(in_signal: np.ndarray, k_size: np.ndarray) -> np.ndarray:
     :param k_size: 1-D array as a kernel
     :return: The convolved array
     """
-    k_size = cv2.normalize(k_size, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX,
-                           dtype=cv2.CV_32F)  # normalize kernel
     np.flip(k_size)  # flip kernel
     return np.asarray([  # inner product of img and kernel
         np.dot(

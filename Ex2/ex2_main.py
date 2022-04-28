@@ -168,12 +168,12 @@ def myID():
 def main():
     print("ID:", myID())
     conv1Demo()
-    conv2Demo()
-    derivDemo()
-    blurDemo()
-    edgeDemo()
-    houghDemo()
-    biliteralFilterDemo()
+    # conv2Demo()
+    # derivDemo()
+    # blurDemo()
+    # edgeDemo()
+    # houghDemo()
+    # biliteralFilterDemo()
 
 
 if __name__ == '__main__':
