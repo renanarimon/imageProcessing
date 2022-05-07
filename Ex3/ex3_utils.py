@@ -33,37 +33,42 @@ def opticalFlow(im1: np.ndarray, im2: np.ndarray, step_size=10,
     """
     points = []
     uv = []
-    if len(im1.shape) > 2:
-        imGray1 = cv2.cvtColor(im1, cv2.COLOR_RGB2GRAY) / 255
-        imGray2 = cv2.cvtColor(im2, cv2.COLOR_RGB2GRAY) / 255
-    else:
-        imGray1 = im1 / 255
-        imGray2 = im2 / 255
+
+    # RGB -> GRAY & normalize
+    imGray1 = cv2.cvtColor(im1, cv2.COLOR_RGB2GRAY) / 255 if len(im1.shape) > 2 else im1 / 255
+    imGray2 = cv2.cvtColor(im2, cv2.COLOR_RGB2GRAY) / 255 if len(im2.shape) > 2 else im2 / 255
+
+    # kernels to derivative by x, y
     kernel_x = np.array([[-1., 1.], [-1., 1.]])
     kernel_y = np.array([[-1., -1.], [1., 1.]])
+
+    # kernel to get t: I2 - I1
     kernel_t = np.array([[1., 1.], [1., 1.]]) * .25
-    w = int(win_size / 2)  # window_size is odd, all the pixels with offset in between [-w, w] are inside the window
-    # Implement Lucas Kanade
-    # for each point, calculate I_x, I_y, I_t
-    mode = 'same'
-    fx = signal.convolve2d(imGray1, kernel_x, boundary='symm', mode=mode)
-    fy = signal.convolve2d(imGray1, kernel_y, boundary='symm', mode=mode)
-    ft = signal.convolve2d(imGray2, kernel_t, boundary='symm', mode=mode) + signal.convolve2d(imGray1, -kernel_t,
+    w = int(win_size / 2)
+
+    # convolve img with kernel to derivative -> derivative img
+    fx = signal.convolve2d(imGray1, kernel_x, boundary='symm', mode='same')
+    fy = signal.convolve2d(imGray1, kernel_y, boundary='symm', mode='same')
+    ft = signal.convolve2d(imGray2, kernel_t, boundary='symm', mode='same') + signal.convolve2d(imGray1, -kernel_t,
                                                                                               boundary='symm',
-                                                                                              mode=mode)
-    tau = 1e-2
-    # within window window_size * window_size
-    for i in range(w, imGray1.shape[0] - w, step_size):
-        for j in range(w, imGray1.shape[1] - w, step_size):
+                                                                                              mode='same')
+    threshold = 1e-2
+
+    # for each point, calculate Ix, Iy, It
+    (rows, cols) = imGray1.shape
+    for i in range(w, rows - w, step_size):
+        for j in range(w, cols - w, step_size):
+            # get the derivative in kernel location
             Ix = fx[i - w:i + w + 1, j - w:j + w + 1].flatten()
             Iy = fy[i - w:i + w + 1, j - w:j + w + 1].flatten()
             It = ft[i - w:i + w + 1, j - w:j + w + 1].flatten()
-            b = np.reshape(It, (It.shape[0], 1))  # get b here
-            A = np.vstack((Ix, Iy)).T  # get A here
-            if np.min(abs(np.linalg.eigvals(np.matmul(A.T, A)))) >= tau:
-                nu = np.matmul(np.linalg.pinv(A), b)  # get velocity here
+
+            b = np.reshape(It, (It.shape[0], 1))  # get b (n*1)
+            A = np.vstack((Ix, Iy)).T  # get A (n*2)
+            if np.min(abs(np.linalg.eigvals(np.matmul(A.T, A)))) >= threshold:
+                nu = np.matmul(np.linalg.pinv(A), b)  #
                 points.append([i, j])
-                uv.append([nu[0], nu[1]])
+                uv.append([nu[0,0], nu[1,0]])
 
     return np.asarray(points), np.asarray(uv)
 
