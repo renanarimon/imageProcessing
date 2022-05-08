@@ -112,7 +112,7 @@ def pyrLaplacianDemo(img_path):
     lvls = 7
 
     lap_pyr = laplaceianReduce(img, lvls)
-    re_lap = laplaceianExpand(lap_pyr)
+    # re_lap = laplaceianExpand(lap_pyr)
 
     f, ax = plt.subplots(2, lvls + 1)
     plt.gray()
@@ -120,9 +120,9 @@ def pyrLaplacianDemo(img_path):
         ax[0, i].imshow(lap_pyr[i])
         ax[1, i].hist(lap_pyr[i].ravel(), 256, [lap_pyr[i].min(), lap_pyr[i].max()])
 
-    ax[0, -1].set_title('Original Image')
-    ax[0, -1].imshow(re_lap)
-    ax[1, -1].hist(re_lap.ravel(), 256, [0, 1])
+    # ax[0, -1].set_title('Original Image')
+    # ax[0, -1].imshow(re_lap)
+    # ax[1, -1].hist(re_lap.ravel(), 256, [0, 1])
     plt.show()
 
 
@@ -156,8 +156,8 @@ def main():
     #
     # imageWarpingDemo(img_path)
     #
-    pyrGaussianDemo('input/pyr_bit.jpg')
-    # pyrLaplacianDemo('input/pyr_bit.jpg')
+    # pyrGaussianDemo('input/pyr_bit.jpg')
+    pyrLaplacianDemo('input/pyr_bit.jpg')
     # blendDemo()
 
 

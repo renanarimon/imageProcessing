@@ -171,7 +171,22 @@ def laplaceianReduce(img: np.ndarray, levels: int = 4) -> List[np.ndarray]:
     :param levels: Pyramid depth
     :return: Laplacian Pyramid (list of images)
     """
-    pass
+    gauss_pyr = gaussianPyr(img, levels)
+    lap_pyr = []
+    lap_pyr.append(gauss_pyr[levels-1])
+    kernel = np.array([[1.],[ 2.], [1.]]) * 0.5
+    kernel = kernel*kernel.T
+    for i in range(levels-1, 0, -1):
+        gaus = gauss_pyr[i]
+        expand = np.zeros_like(gauss_pyr[i-1])  # blur!!
+        expand = signal.convolve2d(expand, kernel, mode='same')
+        for j in range(0, gaus.shape[0]):
+            for k in range(0, gaus.shape[1]):
+                expand[j*2, k*2] = gaus[j, k]
+        lap = gauss_pyr[i-1] - expand
+        lap_pyr.append(lap)
+    lap_pyr.reverse()
+    return lap_pyr
 
 
 def laplaceianExpand(lap_pyr: List[np.ndarray]) -> np.ndarray:
@@ -180,7 +195,9 @@ def laplaceianExpand(lap_pyr: List[np.ndarray]) -> np.ndarray:
     :param lap_pyr: Laplacian Pyramid
     :return: Original image
     """
-    pass
+    up = cv2.pyrUp(lap_pyr)
+    return up
+
 
 
 def pyrBlend(img_1: np.ndarray, img_2: np.ndarray,
