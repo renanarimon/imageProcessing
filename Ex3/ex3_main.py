@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 from ex3_utils import *
 import time
 
@@ -20,12 +22,13 @@ def lkDemo(img_path):
     st = time.time()
     pts, uv = opticalFlow(img_1.astype(np.float), img_2.astype(np.float), step_size=20, win_size=5)
     et = time.time()
-
+    plt.imshow(img_1, cmap='gray')
+    plt.show()
     print("Time: {:.4f}".format(et - st))
     print(np.median(uv,0))
     print(np.mean(uv,0))
 
-    displayOpticalFlow(img_2, pts, uv)
+    displayOpticalFlow(img_1, pts, uv)
 
 
 def hierarchicalkDemo(img_path):

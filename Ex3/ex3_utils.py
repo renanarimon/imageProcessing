@@ -35,8 +35,8 @@ def opticalFlow(im1: np.ndarray, im2: np.ndarray, step_size=10,
     uv = []
 
     # RGB -> GRAY & normalize
-    imGray1 = cv2.cvtColor(im1, cv2.COLOR_RGB2GRAY) / 255 if len(im1.shape) > 2 else im1 / 255
-    imGray2 = cv2.cvtColor(im2, cv2.COLOR_RGB2GRAY) / 255 if len(im2.shape) > 2 else im2 / 255
+    imGray1 = cv2.cvtColor(im1, cv2.COLOR_RGB2GRAY) if len(im1.shape) > 2 else im1
+    imGray2 = cv2.cvtColor(im2, cv2.COLOR_RGB2GRAY) if len(im2.shape) > 2 else im2
 
     # kernels to derivative by x, y
     kernel_x = np.array([[-1., 1.], [-1., 1.]])
@@ -49,10 +49,9 @@ def opticalFlow(im1: np.ndarray, im2: np.ndarray, step_size=10,
     # convolve img with kernel to derivative -> derivative img
     fx = signal.convolve2d(imGray1, kernel_x, boundary='symm', mode='same')
     fy = signal.convolve2d(imGray1, kernel_y, boundary='symm', mode='same')
-    ft = signal.convolve2d(imGray2, kernel_t, boundary='symm', mode='same') + signal.convolve2d(imGray1, -kernel_t,
-                                                                                              boundary='symm',
-                                                                                              mode='same')
-    threshold = 1e-2
+    ft = signal.convolve2d(imGray1, kernel_t, boundary='symm', mode='same') + signal.convolve2d(imGray2, -kernel_t,
+                                                                                                boundary='symm',
+                                                                                                mode='same')
 
     # for each point, calculate Ix, Iy, It
     (rows, cols) = imGray1.shape
@@ -63,13 +62,16 @@ def opticalFlow(im1: np.ndarray, im2: np.ndarray, step_size=10,
             Iy = fy[i - w:i + w + 1, j - w:j + w + 1].flatten()
             It = ft[i - w:i + w + 1, j - w:j + w + 1].flatten()
 
-            b = np.reshape(It, (It.shape[0], 1))  # get b (n*1)
-            A = np.vstack((Ix, Iy)).T  # get A (n*2)
-            if np.min(abs(np.linalg.eigvals(np.matmul(A.T, A)))) >= threshold:
-                nu = np.matmul(np.linalg.pinv(A), b)  #
-                points.append([i, j])
-                uv.append([nu[0,0], nu[1,0]])
-
+            Atb = [[-(Ix * It).sum()], [-(Iy * It).sum()]]
+            AtA = [[(Ix * Ix).sum(), (Ix * Iy).sum()],
+                   [(Ix * Iy).sum(), (Iy * Iy).sum()]]
+            lambdas = np.linalg.eigvals(AtA)
+            l1 = np.max(lambdas)
+            l2 = np.min(lambdas)
+            if l1 >= l2 > 1 and (l1 / l2) < 100:
+                nu = np.matmul(np.linalg.pinv(AtA), Atb)  # (AtA)^-1 * Atb
+                points.append([j, i])  # origin location
+                uv.append([nu[0, 0], nu[1, 0]])  # new location
     return np.asarray(points), np.asarray(uv)
 
 
