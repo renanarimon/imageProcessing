@@ -154,7 +154,14 @@ def gaussianPyr(img: np.ndarray, levels: int = 4) -> List[np.ndarray]:
     :param levels: Pyramid depth
     :return: Gaussian pyramid (list of images)
     """
-    pass
+    # gaus = cv2.getGaussianKernel(5, sigma= 0.11)
+    pyramid = []
+    pyramid.append(img)
+    for i in range(1, levels):
+        tmp = cv2.GaussianBlur(pyramid[i-1], (5,5), 0.11)
+        tmp = tmp[::2, ::2]
+        pyramid.append(tmp)
+    return pyramid
 
 
 def laplaceianReduce(img: np.ndarray, levels: int = 4) -> List[np.ndarray]:
