@@ -5,6 +5,7 @@ import numpy as np
 import cv2
 from scipy import signal
 from numpy.linalg import LinAlgError
+from scipy.ndimage import gaussian_filter
 import matplotlib.pyplot as plt
 
 
@@ -145,7 +146,11 @@ def warpImages(im1: np.ndarray, im2: np.ndarray, T: np.ndarray) -> np.ndarray:
 # ---------------------------------------------------------------------------
 # --------------------- Gaussian and Laplacian Pyramids ---------------------
 # ---------------------------------------------------------------------------
-
+def blurImage(in_image: np.ndarray, k_size: int) -> np.ndarray:
+    sigma = 0.3*((k_size - 1) * 0.5 - 1) + 0.8
+    k = cv2.getGaussianKernel(k_size, sigma)
+    kernel = k * k.T
+    return cv2.filter2D(in_image, -1, kernel)
 
 def gaussianPyr(img: np.ndarray, levels: int = 4) -> List[np.ndarray]:
     """
@@ -154,14 +159,18 @@ def gaussianPyr(img: np.ndarray, levels: int = 4) -> List[np.ndarray]:
     :param levels: Pyramid depth
     :return: Gaussian pyramid (list of images)
     """
-    # gaus = cv2.getGaussianKernel(5, sigma= 0.11)
-    pyramid = []
-    pyramid.append(img)
+    pyramid = [img]
     for i in range(1, levels):
-        tmp = cv2.GaussianBlur(pyramid[i-1], (5,5), 0.11)
+        tmp = blurImage(pyramid[i-1], 5)
         tmp = tmp[::2, ::2]
         pyramid.append(tmp)
     return pyramid
+
+
+def expandImg(img: np.ndarray, newShape: (int, int)) -> np.ndarray:
+    expand = np.zeros(newShape)
+    expand[::2, ::2] = img
+    return blurImage(expand, 5)
 
 
 def laplaceianReduce(img: np.ndarray, levels: int = 4) -> List[np.ndarray]:
@@ -172,17 +181,9 @@ def laplaceianReduce(img: np.ndarray, levels: int = 4) -> List[np.ndarray]:
     :return: Laplacian Pyramid (list of images)
     """
     gauss_pyr = gaussianPyr(img, levels)
-    lap_pyr = []
-    lap_pyr.append(gauss_pyr[levels-1])
-    kernel = np.array([[1.],[ 2.], [1.]]) * 0.5
-    kernel = kernel*kernel.T
+    lap_pyr = [gauss_pyr[levels - 1]]
     for i in range(levels-1, 0, -1):
-        gaus = gauss_pyr[i]
-        expand = np.zeros_like(gauss_pyr[i-1])  # blur!!
-        expand = signal.convolve2d(expand, kernel, mode='same')
-        for j in range(0, gaus.shape[0]):
-            for k in range(0, gaus.shape[1]):
-                expand[j*2, k*2] = gaus[j, k]
+        expand = expandImg(gauss_pyr[i], gauss_pyr[i-1].shape)
         lap = gauss_pyr[i-1] - expand
         lap_pyr.append(lap)
     lap_pyr.reverse()
@@ -195,8 +196,11 @@ def laplaceianExpand(lap_pyr: List[np.ndarray]) -> np.ndarray:
     :param lap_pyr: Laplacian Pyramid
     :return: Original image
     """
-    up = cv2.pyrUp(lap_pyr)
-    return up
+    img = lap_pyr[-1]
+    for i in range(len(lap_pyr)-1, 0, -1):
+        expand = expandImg(img, lap_pyr[i-1].shape)
+        img = expand + lap_pyr[i-1]
+    return img
 
 
 

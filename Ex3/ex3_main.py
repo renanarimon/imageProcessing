@@ -1,3 +1,4 @@
+import cv2
 import matplotlib.pyplot as plt
 
 from ex3_utils import *
@@ -112,17 +113,17 @@ def pyrLaplacianDemo(img_path):
     lvls = 7
 
     lap_pyr = laplaceianReduce(img, lvls)
-    # re_lap = laplaceianExpand(lap_pyr)
+    re_lap = laplaceianExpand(lap_pyr)
 
-    f, ax = plt.subplots(2, lvls + 1)
+    f, ax = plt.subplots(2, lvls+1)
     plt.gray()
     for i in range(lvls):
         ax[0, i].imshow(lap_pyr[i])
         ax[1, i].hist(lap_pyr[i].ravel(), 256, [lap_pyr[i].min(), lap_pyr[i].max()])
 
-    # ax[0, -1].set_title('Original Image')
-    # ax[0, -1].imshow(re_lap)
-    # ax[1, -1].hist(re_lap.ravel(), 256, [0, 1])
+    ax[0, -1].set_title('Original Image')
+    ax[0, -1].imshow(re_lap)
+    ax[1, -1].hist(re_lap.ravel(), 256, [0, 1])
     plt.show()
 
 
@@ -161,5 +162,13 @@ def main():
     # blendDemo()
 
 
+
 if __name__ == '__main__':
     main()
+
+    # img = cv2.cvtColor(cv2.imread(r'input/pyr_bit.jpg'), cv2.COLOR_BGR2RGB) / 255
+    # blur = blurImage(img, 5)
+    # plt.imshow(img, cmap='gray')
+    # plt.show()
+    # plt.imshow(blur, cmap='gray')
+    # plt.show()
