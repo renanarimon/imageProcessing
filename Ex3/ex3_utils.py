@@ -14,7 +14,7 @@ def myID() -> np.int:
     Return my ID (not the friend's ID I copied from)
     :return: int
     """
-    return 100
+    return 207616830
 
 
 # ---------------------------------------------------------------------------
@@ -87,6 +87,12 @@ def opticalFlowPyrLK(img1: np.ndarray, img2: np.ndarray, k: int,
     :return: A 3d array, with a shape of (m, n, 2),
     where the first channel holds U, and the second V.
     """
+    ans = []
+    pyr1 = laplaceianReduce(img1, k)
+    pyr2 = laplaceianReduce(img2, k)
+    points, uv = opticalFlow(pyr1[-1], pyr2[-1], stepSize, winSize)
+    # for i in range(k, 0, -1):
+
     pass
 
 
@@ -146,11 +152,11 @@ def warpImages(im1: np.ndarray, im2: np.ndarray, T: np.ndarray) -> np.ndarray:
 # ---------------------------------------------------------------------------
 # --------------------- Gaussian and Laplacian Pyramids ---------------------
 # ---------------------------------------------------------------------------
-def blurImage(in_image: np.ndarray, k_size: int) -> np.ndarray:
-    sigma = 0.3*((k_size - 1) * 0.5 - 1) + 0.8
-    k = cv2.getGaussianKernel(k_size, sigma)
+def blurImage(in_image: np.ndarray, k_size: int, n: int) -> np.ndarray:
+    k = cv2.getGaussianKernel(k_size, -1)
     kernel = k * k.T
-    return cv2.filter2D(in_image, -1, kernel)
+    return cv2.filter2D(in_image, -1, kernel * n)
+
 
 def gaussianPyr(img: np.ndarray, levels: int = 4) -> List[np.ndarray]:
     """
@@ -161,16 +167,16 @@ def gaussianPyr(img: np.ndarray, levels: int = 4) -> List[np.ndarray]:
     """
     pyramid = [img]
     for i in range(1, levels):
-        tmp = blurImage(pyramid[i-1], 5)
+        tmp = blurImage(pyramid[i - 1], 5, 1)
         tmp = tmp[::2, ::2]
         pyramid.append(tmp)
     return pyramid
 
 
-def expandImg(img: np.ndarray, newShape: (int, int)) -> np.ndarray:
+def expandImg(img: np.ndarray, newShape) -> np.ndarray:
     expand = np.zeros(newShape)
     expand[::2, ::2] = img
-    return blurImage(expand, 5)
+    return blurImage(expand, 5, 4)
 
 
 def laplaceianReduce(img: np.ndarray, levels: int = 4) -> List[np.ndarray]:
@@ -181,13 +187,9 @@ def laplaceianReduce(img: np.ndarray, levels: int = 4) -> List[np.ndarray]:
     :return: Laplacian Pyramid (list of images)
     """
     gauss_pyr = gaussianPyr(img, levels)
-    lap_pyr = [gauss_pyr[levels - 1]]
-    for i in range(levels-1, 0, -1):
-        expand = expandImg(gauss_pyr[i], gauss_pyr[i-1].shape)
-        lap = gauss_pyr[i-1] - expand
-        lap_pyr.append(lap)
-    lap_pyr.reverse()
-    return lap_pyr
+    for i in range(levels - 1):
+        gauss_pyr[i] = gauss_pyr[i] - expandImg(gauss_pyr[i + 1], gauss_pyr[i].shape)
+    return gauss_pyr
 
 
 def laplaceianExpand(lap_pyr: List[np.ndarray]) -> np.ndarray:
@@ -197,11 +199,10 @@ def laplaceianExpand(lap_pyr: List[np.ndarray]) -> np.ndarray:
     :return: Original image
     """
     img = lap_pyr[-1]
-    for i in range(len(lap_pyr)-1, 0, -1):
-        expand = expandImg(img, lap_pyr[i-1].shape)
-        img = expand + lap_pyr[i-1]
+    for i in range(len(lap_pyr) - 1, 0, -1):
+        expand = expandImg(img, lap_pyr[i - 1].shape)
+        img = expand + lap_pyr[i - 1]
     return img
-
 
 
 def pyrBlend(img_1: np.ndarray, img_2: np.ndarray,
