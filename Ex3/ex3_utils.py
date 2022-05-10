@@ -73,6 +73,7 @@ def opticalFlow(im1: np.ndarray, im2: np.ndarray, step_size=10,
                 nu = np.matmul(np.linalg.pinv(AtA), Atb)  # (AtA)^-1 * Atb
                 points.append([j, i])  # origin location
                 uv.append([nu[0, 0], nu[1, 0]])  # new location
+    print("shape: ",np.asarray(uv).shape)
     return np.asarray(points), np.asarray(uv)
 
 
@@ -88,12 +89,12 @@ def opticalFlowPyrLK(img1: np.ndarray, img2: np.ndarray, k: int,
     where the first channel holds U, and the second V.
     """
     ans = []
-    pyr1 = laplaceianReduce(img1, k)
-    pyr2 = laplaceianReduce(img2, k)
+    pyr1 = gaussianPyr(img1, k)
+    pyr2 = gaussianPyr(img2, k)
     points, uv = opticalFlow(pyr1[-1], pyr2[-1], stepSize, winSize)
     # for i in range(k, 0, -1):
 
-    pass
+
 
 
 # ---------------------------------------------------------------------------
@@ -215,4 +216,15 @@ def pyrBlend(img_1: np.ndarray, img_2: np.ndarray,
     :param levels: Pyramid depth
     :return: (Naive blend, Blended Image)
     """
-    pass
+    naive = mask*img_1 + (1-mask) * img_2
+
+    lapPyr_img1 = laplaceianReduce(img_1, levels)
+    lapPyr_img2 = laplaceianReduce(img_2, levels)
+    gaussPyr_mask = gaussianPyr(mask, levels)
+
+    mergeN = lapPyr_img1[-1]*gaussPyr_mask[-1] + (1-gaussPyr_mask[-1])*lapPyr_img2[-1]
+    for i in range(levels-1, 0, -1):
+        expand = expandImg(mergeN, lapPyr_img1[i-1].shape)
+        mergeN = expand + lapPyr_img1[i-1]*gaussPyr_mask[i-1] + (1-gaussPyr_mask[i-1])*lapPyr_img2[i-1]
+
+    return naive, mergeN

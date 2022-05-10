@@ -158,8 +158,8 @@ def main():
     # imageWarpingDemo(img_path)
     #
     # pyrGaussianDemo('input/pyr_bit.jpg')
-    pyrLaplacianDemo('input/pyr_bit.jpg')
-    # blendDemo()
+    # pyrLaplacianDemo('input/pyr_bit.jpg')
+    blendDemo()
 
 
 
