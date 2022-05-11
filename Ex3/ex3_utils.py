@@ -5,6 +5,7 @@ import numpy as np
 import cv2
 from scipy import signal
 from numpy.linalg import LinAlgError
+from scipy.fft import fft, ifft
 from scipy.ndimage import gaussian_filter
 import matplotlib.pyplot as plt
 
@@ -139,7 +140,31 @@ def findTranslationCorr(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     :param im2: image 1 after Translation.
     :return: Translation matrix by correlation.
     """
-    pass
+    maxCorr = 0
+    (x, y) = (0,0)
+    for i in range(im2.shape[0]):
+        for j in range(im2.shape[1]):
+            T = im1[i:, j:]
+            ft = fft(T)
+            fa = fft(im2)
+            Xcorr = ifft(ft*fa)
+            cumSumA = np.cumsum(im2)
+            cumSumA2 = np.cumsum(im2**2)
+            sigmaA = np.sqrt(cumSumA2 - (cumSumA**2)/len(T))
+            sigmaT = np.sqrt(np.std(T) * (len(T)-1))
+            nXcorr = (Xcorr - cumSumA*np.mean(T)) / (sigmaT*sigmaA)
+            if nXcorr > maxCorr:
+                maxCorr = nXcorr
+                (x, y) = (i, j)
+    norm = np.sqrt(x ** 2 + y ** 2)
+    u = x / norm
+    v = y / norm
+    T = np.array([
+        [1, 0, u],
+        [0, 1, v],
+        [0, 0, 1]
+    ])
+    return T
 
 
 def findRigidCorr(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
