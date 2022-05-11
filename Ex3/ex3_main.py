@@ -1,5 +1,6 @@
 import cv2
 import matplotlib.pyplot as plt
+import numpy as np
 
 from ex3_utils import *
 import time
@@ -39,9 +40,33 @@ def hierarchicalkDemo(img_path):
     :return:
     """
     print("Hierarchical LK Demo")
+    img_1 = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY)
+    img_1 = cv2.resize(img_1, (0, 0), fx=.5, fy=0.5)
+    t = np.array([[1, 0, -.2],
+                  [0, 1, -.1],
+                  [0, 0, 1]], dtype=np.float)
+    img_2 = cv2.warpPerspective(img_1, t, img_1.shape[::-1])
+    st = time.time()
+    uv = opticalFlowPyrLK(img_1.astype(np.float), img_2.astype(np.float),k=4, stepSize=20, winSize=5)
+    et = time.time()
+    print("Time: {:.4f}".format(et - st))
+    dispay_hierarchicalk(img_1, uv)
 
-    pass
+def dispay_hierarchicalk(img: np.ndarray, uvs: np.ndarray):
+    plt.imshow(img, cmap='gray')
+    (h, w, z) = uvs.shape
+    pts_list = []
+    uv_list = []
+    for i in range(h):
+        for j in range(w):
+            if uvs[i, j, 0] != 0 or uvs[i, j, 1] != 0:
+                pts_list.append([i, j])
+                uv_list.append([uvs[i, j, 0], uvs[i, j, 1]])
 
+    pts = np.asarray(pts_list)
+    uv = np.asarray(uv_list)
+    plt.quiver(pts[:, 1], pts[:, 0], uv[:, 0], uv[:, 1], color='r')
+    plt.show()
 
 def compareLK(img_path):
     """
@@ -62,6 +87,7 @@ def displayOpticalFlow(img: np.ndarray, pts: np.ndarray, uvs: np.ndarray):
     plt.show()
 
 
+
 # ---------------------------------------------------------------------------
 # ------------------------ Image Alignment & Warping ------------------------
 # ---------------------------------------------------------------------------
@@ -74,6 +100,29 @@ def imageWarpingDemo(img_path):
     :return:
     """
     print("Image Warping Demo")
+    img_1 = cv2.cvtColor(cv2.imread('input/home_orig.jpg'), cv2.COLOR_BGR2GRAY)
+    img_1 = cv2.resize(img_1, (0, 0), fx=.5, fy=0.5)
+
+    img_2 = cv2.cvtColor(cv2.imread('input/home_trans.jpg'), cv2.COLOR_BGR2GRAY)
+    img_2 = cv2.resize(img_2, (0, 0), fx=.5, fy=0.5)
+
+    M = findTranslationLK(img_1, img_2)
+
+    M = cv2.getAffineTransform(img_1, img_2)
+    dst = cv2.warpAffine(img_1, M, img_1.shape)
+
+    # img_trans = cv2.warpAffine(img_1, matrix, img_1.shape)
+
+    f, ax = plt.subplots(2)
+    plt.gray()
+
+    ax[0].imshow(img_2)
+    ax[0].set_title('Original Image')
+    ax[1].imshow(dst)
+    ax[1].set_title('new Image')
+    plt.show()
+
+
 
     pass
 
@@ -152,19 +201,20 @@ def main():
 
     img_path = 'input/boxMan.jpg'
     # lkDemo(img_path)
-    # hierarchicalkDemo(img_path)
+    hierarchicalkDemo(img_path)
     # compareLK(img_path)
     #
     # imageWarpingDemo(img_path)
     #
     # pyrGaussianDemo('input/pyr_bit.jpg')
     # pyrLaplacianDemo('input/pyr_bit.jpg')
-    blendDemo()
+    # blendDemo()
 
 
 
 if __name__ == '__main__':
     main()
+
 
     # img = cv2.cvtColor(cv2.imread(r'input/pyr_bit.jpg'), cv2.COLOR_BGR2RGB) / 255
     # blur = blurImage(img, 5)
@@ -172,3 +222,5 @@ if __name__ == '__main__':
     # plt.show()
     # plt.imshow(blur, cmap='gray')
     # plt.show()
+
+
