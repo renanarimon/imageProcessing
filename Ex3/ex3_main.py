@@ -6,7 +6,6 @@ from ex3_utils import *
 import time
 
 
-
 # ---------------------------------------------------------------------------
 # ------------------------ Lucas Kanade optical flow ------------------------
 # ---------------------------------------------------------------------------
@@ -27,8 +26,8 @@ def lkDemo(img_path):
     plt.imshow(img_1, cmap='gray')
     plt.show()
     print("Time: {:.4f}".format(et - st))
-    print(np.median(uv,0))
-    print(np.mean(uv,0))
+    print(np.median(uv, 0))
+    print(np.mean(uv, 0))
 
     displayOpticalFlow(img_1, pts, uv)
 
@@ -47,10 +46,11 @@ def hierarchicalkDemo(img_path):
                   [0, 0, 1]], dtype=np.float)
     img_2 = cv2.warpPerspective(img_1, t, img_1.shape[::-1])
     st = time.time()
-    uv = opticalFlowPyrLK(img_1.astype(np.float), img_2.astype(np.float),k=4, stepSize=20, winSize=5)
+    uv = opticalFlowPyrLK(img_1.astype(np.float), img_2.astype(np.float), k=4, stepSize=20, winSize=5)
     et = time.time()
     print("Time: {:.4f}".format(et - st))
     dispay_hierarchicalk(img_1, uv)
+
 
 def dispay_hierarchicalk(img: np.ndarray, uvs: np.ndarray):
     plt.imshow(img, cmap='gray')
@@ -67,6 +67,7 @@ def dispay_hierarchicalk(img: np.ndarray, uvs: np.ndarray):
     uv = np.asarray(uv_list)
     plt.quiver(pts[:, 1], pts[:, 0], uv[:, 0], uv[:, 1], color='r')
     plt.show()
+
 
 def compareLK(img_path):
     """
@@ -92,11 +93,12 @@ def compareLK(img_path):
 
         # Ui = Ui + 2 ∗ Ui−1, Vi = Vi + 2 ∗ Vi−1
         array[y, x, 0] = u
-        array[y, x, 1] =v
+        array[y, x, 1] = v
     uv_hlk = opticalFlowPyrLK(img_1.astype(np.float64), img_2.astype(np.float64), k=4, stepSize=20, winSize=5)
     # print("mse = ",np.square(array - uv_hlk).mean())
-    MSE =np.square(array - uv_hlk).mean()
-    print("mse = ",np.around(MSE,decimals=6))
+    MSE = np.square(array - uv_hlk).mean()
+    print("mse = ", np.around(MSE, decimals=6))
+
 
 def displayOpticalFlow(img: np.ndarray, pts: np.ndarray, uvs: np.ndarray):
     plt.imshow(img, cmap='gray')
@@ -105,10 +107,28 @@ def displayOpticalFlow(img: np.ndarray, pts: np.ndarray, uvs: np.ndarray):
     plt.show()
 
 
-
 # ---------------------------------------------------------------------------
 # ------------------------ Image Alignment & Warping ------------------------
 # ---------------------------------------------------------------------------
+def WarpImageTest(img_path):
+    orig_img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB)
+
+    t = np.array([[1, 0, -80],
+                  [0, 1, -100],
+                  [0, 0, 1]], dtype=np.float64)
+
+    img_2 = cv2.warpPerspective(orig_img, t, (orig_img.shape[1], orig_img.shape[0]))
+    img_my_warp = warpImages(orig_img, img_2, t)
+    f, ax = plt.subplots(1, 3)
+    # plt.gray()
+
+    ax[0].imshow(orig_img)
+    ax[0].set_title('Original Image')
+    ax[1].imshow(img_my_warp)
+    ax[1].set_title('my warp')
+    ax[2].imshow(img_2)
+    ax[2].set_title('cv2 warp')
+    plt.show()
 
 
 def imageWarpingDemo(img_path):
@@ -118,31 +138,7 @@ def imageWarpingDemo(img_path):
     :return:
     """
     print("Image Warping Demo")
-    img_1 = cv2.cvtColor(cv2.imread('input/home_orig.jpg'), cv2.COLOR_BGR2GRAY)
-    img_1 = cv2.resize(img_1, (0, 0), fx=.5, fy=0.5)
-
-    img_2 = cv2.cvtColor(cv2.imread('input/home_trans.jpg'), cv2.COLOR_BGR2GRAY)
-    img_2 = cv2.resize(img_2, (0, 0), fx=.5, fy=0.5)
-
-    m = findTranslationCorr(img_1, img_2)
-
-    # M = findTranslationLK(img_1, img_2)
-    #
-    # M = cv2.getAffineTransform(img_1, img_2)
-    # dst = cv2.warpAffine(img_1, M, img_1.shape)
-    #
-    # # img_trans = cv2.warpAffine(img_1, matrix, img_1.shape)
-    #
-    # f, ax = plt.subplots(2)
-    # plt.gray()
-    #
-    # ax[0].imshow(img_2)
-    # ax[0].set_title('Original Image')
-    # ax[1].imshow(dst)
-    # ax[1].set_title('new Image')
-    # plt.show()
-
-
+    WarpImageTest(img_path)
 
     pass
 
@@ -184,7 +180,7 @@ def pyrLaplacianDemo(img_path):
     lap_pyr = laplaceianReduce(img, lvls)
     re_lap = laplaceianExpand(lap_pyr)
 
-    f, ax = plt.subplots(2, lvls+1)
+    f, ax = plt.subplots(2, lvls + 1)
     plt.gray()
     for i in range(lvls):
         ax[0, i].imshow(lap_pyr[i])
@@ -213,28 +209,26 @@ def blendDemo():
 
     plt.show()
 
-    cv2.imwrite('sunset_cat.png', cv2.cvtColor((im_blend * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
+    cv2.imwrite('input/sunset_cat.png', cv2.cvtColor((im_blend * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
 
 
 def main():
     print("ID:", myID())
 
     img_path = 'input/boxMan.jpg'
-    lkDemo(img_path)
-    hierarchicalkDemo(img_path)
-    compareLK(img_path)
+    # lkDemo(img_path)
+    # hierarchicalkDemo(img_path)
+    # compareLK(img_path)
 
-    # imageWarpingDemo(img_path)
+    imageWarpingDemo(img_path)
     #
     # pyrGaussianDemo('input/pyr_bit.jpg')
     # pyrLaplacianDemo('input/pyr_bit.jpg')
     # blendDemo()
 
 
-
 if __name__ == '__main__':
     main()
-
 
     # img = cv2.cvtColor(cv2.imread(r'input/pyr_bit.jpg'), cv2.COLOR_BGR2RGB) / 255
     # blur = blurImage(img, 5)
@@ -242,5 +236,3 @@ if __name__ == '__main__':
     # plt.show()
     # plt.imshow(blur, cmap='gray')
     # plt.show()
-
-

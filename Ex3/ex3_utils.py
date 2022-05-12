@@ -46,9 +46,9 @@ def opticalFlow(im1: np.ndarray, im2: np.ndarray, step_size=10,
 
     # kernel to get t: I2 - I1
     kernel_t = np.array([[1., 1.], [1., 1.]]) * .25
-    w = int(win_size / 2)
+    s = int(win_size / 2)
 
-    # convolve img with kernel to derivative -> derivative img
+    # convolve img with kernel to derivative
     fx = signal.convolve2d(imGray1, kernel_x, boundary='symm', mode='same')
     fy = signal.convolve2d(imGray1, kernel_y, boundary='symm', mode='same')
     ft = signal.convolve2d(imGray1, kernel_t, boundary='symm', mode='same') + signal.convolve2d(imGray2, -kernel_t,
@@ -56,13 +56,14 @@ def opticalFlow(im1: np.ndarray, im2: np.ndarray, step_size=10,
                                                                                                 mode='same')
 
     # for each point, calculate Ix, Iy, It
+    # by moving the kernel over the image
     (rows, cols) = imGray1.shape
-    for i in range(w, rows - w, step_size):
-        for j in range(w, cols - w, step_size):
-            # get the derivative in kernel location
-            Ix = fx[i - w:i + w + 1, j - w:j + w + 1].flatten()
-            Iy = fy[i - w:i + w + 1, j - w:j + w + 1].flatten()
-            It = ft[i - w:i + w + 1, j - w:j + w + 1].flatten()
+    for i in range(s, rows - s, step_size):
+        for j in range(s, cols - s, step_size):
+            # get the derivative in the kernel location
+            Ix = fx[i - s:i + s + 1, j - s:j + s + 1].flatten()
+            Iy = fy[i - s:i + s + 1, j - s:j + s + 1].flatten()
+            It = ft[i - s:i + s + 1, j - s:j + s + 1].flatten()
 
             Atb = [[-(Ix * It).sum()], [-(Iy * It).sum()]]
             AtA = [[(Ix * Ix).sum(), (Ix * Iy).sum()],
@@ -93,8 +94,8 @@ def opticalFlowPyrLK(img1: np.ndarray, img2: np.ndarray, k: int,
     pyr2 = gaussianPyr(img2, k)  # gauss pyramid for img2
     ans = np.zeros((img1.shape[0], img1.shape[1], 2))  # (m,n,2) zero array to put in u,v for each pixel
     for i in range(k, 0, -1):  # for each level of pyramids (small -> big)
-        points, uv = opticalFlow(pyr1[i - 1], pyr2[i - 1], stepSize, winSize)  # i'th img
-        for j in range(len(points)):  # change pixels uv
+        points, uv = opticalFlow(pyr1[i - 1], pyr2[i - 1], stepSize, winSize)  # uv for i'th img
+        for j in range(len(points)):  # change pixels uv by formula
             y, x = points[j]
             u, v = uv[j]
             ans[x, y, 0] = 2 * ans[x, y, 0] + u  # Ui = Ui + 2 ∗ Ui−1
@@ -114,6 +115,7 @@ def findTranslationLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     :param im2: image 1 after Translation.
     :return: Translation matrix by LK.
     """
+
     points, uv = opticalFlow(im1, im2)
     u, v = np.mean(uv, axis=0)
 
@@ -141,18 +143,18 @@ def findTranslationCorr(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     :return: Translation matrix by correlation.
     """
     maxCorr = 0
-    (x, y) = (0,0)
+    (x, y) = (0, 0)
     for i in range(im2.shape[0]):
         for j in range(im2.shape[1]):
             T = im1[i:, j:]
             ft = fft(T)
             fa = fft(im2)
-            Xcorr = ifft(ft*fa)
+            Xcorr = ifft(ft * fa)
             cumSumA = np.cumsum(im2)
-            cumSumA2 = np.cumsum(im2**2)
-            sigmaA = np.sqrt(cumSumA2 - (cumSumA**2)/len(T))
-            sigmaT = np.sqrt(np.std(T) * (len(T)-1))
-            nXcorr = (Xcorr - cumSumA*np.mean(T)) / (sigmaT*sigmaA)
+            cumSumA2 = np.cumsum(im2 ** 2)
+            sigmaA = np.sqrt(cumSumA2 - (cumSumA ** 2) / len(T))
+            sigmaT = np.sqrt(np.std(T) * (len(T) - 1))
+            nXcorr = (Xcorr - cumSumA * np.mean(T)) / (sigmaT * sigmaA)
             if nXcorr > maxCorr:
                 maxCorr = nXcorr
                 (x, y) = (i, j)
@@ -176,7 +178,7 @@ def findRigidCorr(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     pass
 
 
-def warpImages(im1: np.ndarray, im2: np.ndarray, T: np.ndarray) -> np.ndarray:
+def warpImages1(im1: np.ndarray, im2: np.ndarray, T: np.ndarray) -> np.ndarray:
     """
     :param im1: input image 1 in grayscale format.
     :param im2: input image 2 in grayscale format.
@@ -185,7 +187,45 @@ def warpImages(im1: np.ndarray, im2: np.ndarray, T: np.ndarray) -> np.ndarray:
     :return: warp image 2 according to T and display both image1
     and the wrapped version of the image2 in the same figure.
     """
-    pass
+    x = np.arange(0, im2.shape[1])
+    y = np.arange(0, im2.shape[0])
+
+    x, y = np.meshgrid(y, x)
+    x = x.flatten()
+    y = y.flatten()
+    z = np.ones_like(x)
+
+    A = np.vstack((x, y, z))
+    M = np.matmul(np.linalg.pinv(T), A)
+
+    Ix = (M[0] / M[2]).astype(np.uint8).reshape(im1.shape)
+    Iy = (M[1] / M[2]).astype(np.uint8).reshape(im1.shape)
+
+    # imgNew = np.zeros_like(im1)
+    imgNew = im1[Ix, Iy]
+
+    i = 0
+    for y in range(im1.shape[1]):
+        for x in range(im1.shape[0]):
+            s = Ix[i]
+            r = Iy[i]
+            imgNew[x, y] = im1[Ix[i], Iy[i]]
+            i += 1
+    return imgNew
+
+
+def warpImages(im1: np.ndarray, im2: np.ndarray, T: np.ndarray) -> np.ndarray:
+    tx = int(T[0, 2])
+    ty = int(T[1, 2])
+    new_img = np.zeros_like(im1)
+    h, w = new_img.shape[0], new_img.shape[1]
+    for i in range(w):
+        for j in range(h):
+            r = j - ty
+            s = i - tx
+            if 0 <= r < im1.shape[0] and 0 <= s < im1.shape[1]:
+                new_img[j, i] = im1[r, s]
+    return new_img
 
 
 # ---------------------------------------------------------------------------
