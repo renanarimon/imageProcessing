@@ -23,8 +23,7 @@ def lkDemo(img_path):
     st = time.time()
     pts, uv = opticalFlow(img_1.astype(np.float), img_2.astype(np.float), step_size=20, win_size=5)
     et = time.time()
-    plt.imshow(img_1, cmap='gray')
-    plt.show()
+    print(uv)
     print("Time: {:.4f}".format(et - st))
     print(np.median(uv, 0))
     print(np.mean(uv, 0))
@@ -68,6 +67,29 @@ def dispay_hierarchicalk(img: np.ndarray, uvs: np.ndarray):
     plt.quiver(pts[:, 1], pts[:, 0], uv[:, 0], uv[:, 1], color='r')
     plt.show()
 
+
+def findTranslationLK_test(img_path):
+    orig_img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY)
+    # tran_img = cv2.cvtColor(cv2.imread('input/TransHome.jpg'), cv2.COLOR_BGR2GRAY)
+    orig_img = cv2.resize(orig_img, (0, 0), fx=.5, fy=0.5)
+    t = np.array([[1, 0, -2],
+                  [0, 1, -4],
+                  [0, 0, 1]], dtype=np.float64)
+    tran_img = cv2.warpPerspective(orig_img, t, orig_img.shape[::-1])
+    tran = findTranslationLK(orig_img, tran_img)
+    print(tran)
+    img_2 = cv2.warpPerspective(orig_img, tran, orig_img.shape[::-1])  # with the new translation matrix
+    # MSE = np.square(img_2 - tran_img).mean()
+    # print("MSE = ", np.around(MSE, decimals=1))
+    f, ax = plt.subplots(2)
+    plt.gray()
+
+    ax[0].imshow(orig_img)
+    ax[0].set_title('Original Image')
+    ax[1].imshow(img_2)
+    ax[1].set_title('new Image')
+    plt.show()
+    print("mse = ", np.square(tran_img - img_2).mean())
 
 def compareLK(img_path):
     """
@@ -217,10 +239,11 @@ def main():
 
     img_path = 'input/boxMan.jpg'
     # lkDemo(img_path)
+    findTranslationLK_test(img_path)
     # hierarchicalkDemo(img_path)
     # compareLK(img_path)
 
-    imageWarpingDemo(img_path)
+    # imageWarpingDemo(img_path)
     #
     # pyrGaussianDemo('input/pyr_bit.jpg')
     # pyrLaplacianDemo('input/pyr_bit.jpg')

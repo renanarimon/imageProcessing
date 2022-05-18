@@ -40,21 +40,18 @@ def opticalFlow(im1: np.ndarray, im2: np.ndarray, step_size=10,
     imGray1 = cv2.cvtColor(im1, cv2.COLOR_RGB2GRAY) if len(im1.shape) > 2 else im1
     imGray2 = cv2.cvtColor(im2, cv2.COLOR_RGB2GRAY) if len(im2.shape) > 2 else im2
 
-    # kernels to derivative by x, y
-    kernel_x = np.array([[-1., 1.], [-1., 1.]])
-    kernel_y = np.array([[-1., -1.], [1., 1.]])
-
     # kernel to get t: I2 - I1
     kernel_t = np.array([[1., 1.], [1., 1.]]) * .25
     s = int(win_size / 2)
 
     # convolve img with kernel to derivative
-    fx = signal.convolve2d(imGray1, kernel_x, boundary='symm', mode='same')
-    fy = signal.convolve2d(imGray1, kernel_y, boundary='symm', mode='same')
-    ft = signal.convolve2d(imGray1, kernel_t, boundary='symm', mode='same') + signal.convolve2d(imGray2, -kernel_t,
+    fx = cv2.Sobel(im2, cv2.CV_64F, 1, 0, ksize=3,
+                         borderType=cv2.BORDER_DEFAULT)
+    fy = cv2.Sobel(im2, cv2.CV_64F, 0, 1, ksize=3,
+                         borderType=cv2.BORDER_DEFAULT)
+    ft = signal.convolve2d(imGray2, kernel_t, boundary='symm', mode='same') + signal.convolve2d(imGray1, -kernel_t,
                                                                                                 boundary='symm',
                                                                                                 mode='same')
-
     # for each point, calculate Ix, Iy, It
     # by moving the kernel over the image
     (rows, cols) = imGray1.shape
@@ -115,15 +112,28 @@ def findTranslationLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     :param im2: image 1 after Translation.
     :return: Translation matrix by LK.
     """
-
+    MSE_min = sys.maxsize
     points, uv = opticalFlow(im1, im2)
-    u, v = np.mean(uv, axis=0)
+    (u1, v1) = uv[0]
+    for (u, v) in uv:
+        T = np.array([
+            [1, 0, u],
+            [0, 1, v],
+            [0, 0, 1]
+        ])
+
+        trans_img = cv2.warpPerspective(im1, T, im1.shape[::-1])
+        MSE = np.square(im2 - trans_img).mean()
+        if MSE < MSE_min:
+            MSE_min = MSE
+            u1, v1 = u, v
 
     T = np.array([
-        [1, 0, u],
-        [0, 1, v],
+        [1, 0, u1],
+        [0, 1, v1],
         [0, 0, 1]
     ])
+
     return T
 
 
