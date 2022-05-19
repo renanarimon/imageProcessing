@@ -70,7 +70,6 @@ def dispay_hierarchicalk(img: np.ndarray, uvs: np.ndarray):
 
 def findTranslationLK_test(img_path):
     orig_img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY)
-    # tran_img = cv2.cvtColor(cv2.imread('input/TransHome.jpg'), cv2.COLOR_BGR2GRAY)
     orig_img = cv2.resize(orig_img, (0, 0), fx=.5, fy=0.5)
     t = np.array([[1, 0, -2],
                   [0, 1, -4],
@@ -79,8 +78,27 @@ def findTranslationLK_test(img_path):
     tran = findTranslationLK(orig_img, tran_img)
     print(tran)
     img_2 = cv2.warpPerspective(orig_img, tran, orig_img.shape[::-1])  # with the new translation matrix
-    # MSE = np.square(img_2 - tran_img).mean()
-    # print("MSE = ", np.around(MSE, decimals=1))
+    f, ax = plt.subplots(2)
+    plt.gray()
+
+    ax[0].imshow(orig_img)
+    ax[0].set_title('Original Image')
+    ax[1].imshow(img_2)
+    ax[1].set_title('new Image')
+    plt.show()
+    print("mse = ", np.square(tran_img - img_2).mean())
+
+
+def corr_test(img_path):
+    orig_img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY)
+    orig_img = cv2.resize(orig_img, (0, 0), fx=.5, fy=0.5)
+    t = np.array([[1, 0, -2],
+                  [0, 1, -4],
+                  [0, 0, 1]], dtype=np.float64)
+    tran_img = cv2.warpPerspective(orig_img, t, orig_img.shape[::-1])
+    tran = findTranslationCorr(orig_img, tran_img)
+    print(tran)
+    img_2 = cv2.warpPerspective(orig_img, tran, orig_img.shape[::-1])  # with the new translation matrix
     f, ax = plt.subplots(2)
     plt.gray()
 
@@ -98,28 +116,38 @@ def compareLK(img_path):
     :param img_path: Image input
     :return:
     """
-    print("Compare LK & Hierarchical LK")
     img_1 = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY)
     img_1 = cv2.resize(img_1, (0, 0), fx=.5, fy=0.5)
-    t = np.array([[1, 0, -.2],
-                  [0, 1, -.1],
-                  [0, 0, 1]], dtype=np.float64)
-    img_2 = cv2.warpPerspective(img_1, t, img_1.shape[::-1])
+    t = np.array([[1, 0, -1],
+                  [0, 1, -1],
+                  [0, 0, 1]], dtype=np.float32)
+    img_2 = cv2.warpPerspective(
+        img_1, t, img_1.shape[::-1], flags=cv2.INTER_LINEAR)
     st = time.time()
-    pts, uv_lk = opticalFlow(img_1.astype(np.float64), img_2.astype(np.float64), step_size=20, win_size=5)
-    h, w = img_1.shape[0], img_1.shape[1]
-    array = np.zeros((h, w, 2))
-    for i in range(len(pts)):
-        x, y = pts[i]
-        u, v = uv_lk[i]
+    _, uv_naive = opticalFlow(img_1.astype(np.float32), img_2.astype(
+        np.float32), step_size=20, win_size=5)
+    et = time.time()
 
-        # Ui = Ui + 2 ∗ Ui−1, Vi = Vi + 2 ∗ Vi−1
-        array[y, x, 0] = u
-        array[y, x, 1] = v
-    uv_hlk = opticalFlowPyrLK(img_1.astype(np.float64), img_2.astype(np.float64), k=4, stepSize=20, winSize=5)
-    # print("mse = ",np.square(array - uv_hlk).mean())
-    MSE = np.square(array - uv_hlk).mean()
-    print("mse = ", np.around(MSE, decimals=6))
+    print("Compare LK & Hierarchical LK")
+    print("Time of naive method: {:.4f}".format(et - st))
+    print('median of naive method:', np.median(uv_naive, 0))
+    print('mean of naive method:', np.mean(uv_naive, 0))
+
+    st = time.time()
+    uv_pyr = opticalFlowPyrLK(img_1.astype(np.float32), img_2.astype(
+        np.float32), 7, stepSize=20, winSize=5)
+    et = time.time()
+    median_pyr = np.ma.median(np.ma.masked_where(
+        uv_pyr == np.zeros((2)), uv_pyr), axis=(0, 1)).filled(0)
+    mean_pyr = np.ma.mean(np.ma.masked_where(
+        uv_pyr == np.zeros((2)), uv_pyr), axis=(0, 1)).filled(0)
+    print("Time of hierarchical method: {:.4f}".format(et - st))
+    print('median of hierarchical method:', median_pyr)
+    print('mean of hierarchical method:', mean_pyr)
+    ground_truth = np.array([3, -3])
+    diff_naive = np.power(np.median(uv_naive, 0) - ground_truth, 2).sum() / 2
+    diff_pyr = np.power(median_pyr - ground_truth, 2).sum() / 2
+    print('accuracy improved by:', diff_naive - diff_pyr)
 
 
 def displayOpticalFlow(img: np.ndarray, pts: np.ndarray, uvs: np.ndarray):
@@ -238,10 +266,12 @@ def main():
     print("ID:", myID())
 
     img_path = 'input/boxMan.jpg'
+    img_path1 = 'input/home_orig.jpg'
+    # corr_test(img_path1)
     # lkDemo(img_path)
-    findTranslationLK_test(img_path)
+    # findTranslationLK_test(img_path)
     # hierarchicalkDemo(img_path)
-    # compareLK(img_path)
+    compareLK(img_path)
 
     # imageWarpingDemo(img_path)
     #

@@ -6,8 +6,11 @@ import cv2
 from scipy import signal
 from numpy.linalg import LinAlgError
 from scipy.fft import fft, ifft
+
+from scipy import signal
 from scipy.ndimage import gaussian_filter
 import matplotlib.pyplot as plt
+from alive_progress import alive_bar
 
 
 def myID() -> np.int:
@@ -46,9 +49,9 @@ def opticalFlow(im1: np.ndarray, im2: np.ndarray, step_size=10,
 
     # convolve img with kernel to derivative
     fx = cv2.Sobel(im2, cv2.CV_64F, 1, 0, ksize=3,
-                         borderType=cv2.BORDER_DEFAULT)
+                   borderType=cv2.BORDER_DEFAULT)
     fy = cv2.Sobel(im2, cv2.CV_64F, 0, 1, ksize=3,
-                         borderType=cv2.BORDER_DEFAULT)
+                   borderType=cv2.BORDER_DEFAULT)
     ft = signal.convolve2d(imGray2, kernel_t, boundary='symm', mode='same') + signal.convolve2d(imGray1, -kernel_t,
                                                                                                 boundary='symm',
                                                                                                 mode='same')
@@ -89,16 +92,35 @@ def opticalFlowPyrLK(img1: np.ndarray, img2: np.ndarray, k: int,
     """
     pyr1 = gaussianPyr(img1, k)  # gauss pyramid for img1
     pyr2 = gaussianPyr(img2, k)  # gauss pyramid for img2
-    ans = np.zeros((img1.shape[0], img1.shape[1], 2))  # (m,n,2) zero array to put in u,v for each pixel
-    for i in range(k, 0, -1):  # for each level of pyramids (small -> big)
-        points, uv = opticalFlow(pyr1[i - 1], pyr2[i - 1], stepSize, winSize)  # uv for i'th img
+    currImg = np.zeros(
+        (pyr1[k - 2].shape[0], pyr1[k - 2].shape[1], 2))  # (m,n,2) zero array to put in u,v for each pixel
+    lastImg = np.zeros((pyr1[k - 1].shape[0], pyr1[k - 1].shape[1], 2))
+
+    points, uv = opticalFlow(pyr1[k - 1], pyr2[k - 1], stepSize, winSize)
+    for j in range(len(points)):  # change pixels uv by formula
+        y, x = points[j]
+        u, v = uv[j]
+        lastImg[x, y, 0] = u
+        lastImg[x, y, 1] = v
+
+    for i in range(k - 2, -1, -1):  # for each level of pyramids (small -> big)
+        points, uv = opticalFlow(pyr1[i], pyr2[i], stepSize, winSize)  # uv for i'th img
         for j in range(len(points)):  # change pixels uv by formula
             y, x = points[j]
             u, v = uv[j]
-            ans[x, y, 0] = 2 * ans[x, y, 0] + u  # Ui = Ui + 2 ∗ Ui−1
-            ans[x, y, 1] = 2 * ans[x, y, 1] + v  # Vi = Vi + 2 ∗ Vi−1
+            currImg[x, y, 0] = u
+            currImg[x, y, 1] = v
+        for z in range(lastImg.shape[0]):
+            for r in range(lastImg.shape[1]):
+                currImg[z * 2, r * 2, 0] += lastImg[z, r, 0] * 2
+                currImg[z * 2, r * 2, 1] += lastImg[z, r, 1] * 2
 
-    return ans
+        lastImg = currImg.copy()
+        if i - 1 >= 0:
+            currImg.fill(0)
+            currImg.resize((pyr1[i - 1].shape[0], pyr1[i - 1].shape[1], 2))
+
+    return currImg
 
 
 # ---------------------------------------------------------------------------
@@ -146,37 +168,76 @@ def findRigidLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     pass
 
 
+def opticalFlowCrossCorr(im1: np.ndarray, im2: np.ndarray, step_size, win_size):
+    half = win_size // 2
+    uvs = np.zeros((*im1.shape, 2))
+    im1 = cv2.copyMakeBorder(im1, half, half, half,
+                             half, borderType=cv2.BORDER_CONSTANT, value=0)
+    im2 = cv2.copyMakeBorder(im2, half, half, half,
+                             half, borderType=cv2.BORDER_CONSTANT, value=0)
+
+    def argcorrelation(win: np.ndarray):
+        res = cv2.matchTemplate(im2, win, 'cv.TM_CCOEFF')
+        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+        return np.array(max_loc)
+
+    with alive_bar(int((im1.shape[0] - win_size)(im1.shape[1] - win_size) / step_size * 2)) as bar:
+        for y in range(half, im1.shape[0] - half - 1, step_size):
+            for x in range(half, im1.shape[1] - half - 1, step_size):
+                window = im1[y - half: y + half + 1, x - half: x + half + 1]
+                top_correlation = argcorrelation(window)
+                uvs[y - half, x - half] = np.flip(top_correlation - np.array([y, x]))
+                bar()
+    return uvs
+
+
 def findTranslationCorr(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     """
     :param im1: input image 1 in grayscale format.
     :param im2: image 1 after Translation.
     :return: Translation matrix by correlation.
     """
-    maxCorr = 0
-    (x, y) = (0, 0)
-    for i in range(im2.shape[0]):
-        for j in range(im2.shape[1]):
-            T = im1[i:, j:]
-            ft = fft(T)
-            fa = fft(im2)
-            Xcorr = ifft(ft * fa)
-            cumSumA = np.cumsum(im2)
-            cumSumA2 = np.cumsum(im2 ** 2)
-            sigmaA = np.sqrt(cumSumA2 - (cumSumA ** 2) / len(T))
-            sigmaT = np.sqrt(np.std(T) * (len(T) - 1))
-            nXcorr = (Xcorr - cumSumA * np.mean(T)) / (sigmaT * sigmaA)
-            if nXcorr > maxCorr:
-                maxCorr = nXcorr
-                (x, y) = (i, j)
-    norm = np.sqrt(x ** 2 + y ** 2)
-    u = x / norm
-    v = y / norm
-    T = np.array([
-        [1, 0, u],
-        [0, 1, v],
-        [0, 0, 1]
-    ])
-    return T
+    uvs = opticalFlowCrossCorr(im1, im2, 15, 9)
+    u, v = np.ma.mean(np.ma.masked_where(
+        uvs == np.zeros((2)), uvs), axis=(0, 1)).filled(0)
+    return np.array([[1, 0, u],
+                     [0, 1, v],
+                     [0, 0, 1]])
+
+
+# def FindCorr(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
+#     """
+#     :param im1: input image 1 in grayscale format.
+#     :param im2: image 1 after Translation.
+#     :return: Translation matrix by correlation.
+#     """
+#     win_size = 5
+#     step_size = 5
+#     half = win_size // 2
+#     UV = []
+#
+#     def corrlation(im1_win: np.ndarray, y_in, x_in):
+#         # im2_borders = cv2.copyMakeBorder(im2, half, half, half,
+#         #                                  half, borderType=cv2.BORDER_CONSTANT, value=0)
+#         max_corr = np.zeros_like(im1_win)
+#         uv = []
+#         a = (im1_win - np.mean(im1_win)) / (np.std(im1_win) * len(im1_win))
+#         for y in range(half, im2.shape[0] - half - 1, step_size):
+#             for x in range(half, im2.shape[1] - half - 1, step_size):
+#                 win2 = im2[y - half: y + half + 1, x - half: x + half + 1]
+#                 b = (win2 - np.mean(win2)) / (np.std(win2))
+#                 c = signal.correlate2d(a, b, 'same')
+#                 if c.sum() > max_corr.sum():
+#                     max_corr = c
+#                     uv = (y_in - (y - half), x_in - (x - half))
+#         return uv
+#
+#     for y in range(half, im1.shape[0] - half - 1, step_size):
+#         for x in range(half, im1.shape[1] - half - 1, step_size):
+#             window = im1[y - half: y + half + 1, x - half: x + half + 1]
+#             top_correlation = corrlation(window, y - half, x - half)
+#             UV.append(top_correlation)
+#     return UV
 
 
 def findRigidCorr(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
