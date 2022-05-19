@@ -4,12 +4,9 @@ from typing import List
 
 import numpy as np
 import cv2
-from scipy import signal
 from numpy.linalg import LinAlgError
-from scipy.fft import fft, ifft
 
 from scipy import signal
-from scipy.ndimage import gaussian_filter
 import matplotlib.pyplot as plt
 from alive_progress import alive_bar
 
@@ -129,6 +126,54 @@ def opticalFlowPyrLK(img1: np.ndarray, img2: np.ndarray, k: int,
 # ---------------------------------------------------------------------------
 
 
+# ------------------ Help functions ----------------------
+
+def getWarpMatrix(method, theta, tx, ty) -> np.ndarray:
+    """
+
+    :param method: rigid / trans / rigid_opp
+    :param theta: angle (for trans put 0)
+    :param tx: move x
+    :param ty: move y
+    :return: correct warping matrix
+    """
+    if method == "rigid":
+        return np.array([[math.cos(theta), -math.sin(theta), tx],
+                         [math.sin(theta), math.cos(theta), ty],
+                         [0, 0, 1]], dtype=np.float64)
+    elif method == "trans":
+        return np.array([[1, 0, tx],
+                         [0, 1, ty],
+                         [0, 0, 1]], dtype=np.float64)
+    elif method == "rigid_opp":
+        return np.array([[math.cos(theta), math.sin(theta), 0],
+                         [-math.sin(theta), math.cos(theta), 0],
+                         [0, 0, 1]], dtype=np.float64)
+
+
+def findTheta(im1: np.ndarray, im2: np.ndarray) -> float:
+    """
+    find angle of rotation between im1 to im2
+    :param im1:
+    :param im2:
+    :return: theta
+    """
+    min_mse = 1000
+    theta = 0
+
+    # find best angle
+    for t in range(360):
+        matrix_rigid = getWarpMatrix("rigid", t, 0, 0)
+        curr_rigid_img = cv2.warpPerspective(im1, matrix_rigid, im1.shape[::-1])  # warp img
+        mse = np.square(np.subtract(im2, curr_rigid_img)).mean()  # mse with curr angle
+        if mse < min_mse:  # if this angle gave better result -> change
+            min_mse = mse
+            theta = t
+    return theta
+
+
+# ------------------ Translation & Rigid by LK ----------------------
+
 def findTranslationLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     """
     :param im1: image 1 in grayscale format.
@@ -136,28 +181,35 @@ def findTranslationLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     :return: Translation matrix by LK.
     """
     MSE_min = sys.maxsize
-    points, uv = opticalFlow(im1, im2)
+    points, uv = opticalFlow(im1, im2)  # get uv by LK
     (u1, v1) = uv[0]
-    for (u, v) in uv:
-        T = np.array([
-            [1, 0, u],
-            [0, 1, v],
-            [0, 0, 1]
-        ])
 
+    # find the best u,v --> minimize the MSE
+    for (u, v) in uv:
+        T = getWarpMatrix("trans", 0, u, v)
         trans_img = cv2.warpPerspective(im1, T, im1.shape[::-1])
         MSE = np.square(im2 - trans_img).mean()
         if MSE < MSE_min:
             MSE_min = MSE
             u1, v1 = u, v
 
-    T = np.array([
-        [1, 0, u1],
-        [0, 1, v1],
-        [0, 0, 1]
-    ])
+    return getWarpMatrix("trans", 0, u1, v1)
 
-    return T
+
+def findRigid(im1: np.ndarray, im2: np.ndarray, method) -> np.ndarray:
+    """
+    Help function for  rigidLK & rigidCorr
+    :param im1: origin img
+    :param im2: rigid img
+    :param method: translation Lk / corr
+    :return: rigid matrix from im1 to im2
+    """
+    theta = findTheta(im1, im2)  # find theta
+    matrix_rigid_opp = getWarpMatrix("rigid_opp", theta, 0, 0)  # matrix to rotate img back to origin
+    img_back = cv2.warpPerspective(im2, matrix_rigid_opp, im2.shape[::-1])  # rotate img back to origin
+    T = method(im1, img_back)  # find translation matrix
+
+    return getWarpMatrix("rigid", theta, T[0, 2], T[1, 2])  # rigid matrix: translation+rotation
 
 
 def findRigidLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
@@ -166,111 +218,66 @@ def findRigidLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     :param im2: image 1 after Rigid.
     :return: Rigid matrix by LK.
     """
-
-    def findTheta() -> float:
-        min_mse = 1000
-        tran_mat = np.zeros((3, 3))
-        theta = 0
-
-        for t in range(360):
-            tmp_t = np.array([[math.cos(t), -math.sin(t), 0],
-                              [math.sin(t), math.cos(t), 0],
-                              [0, 0, 1]], dtype=np.float64)
-            img_by_t = cv2.warpPerspective(im1, tmp_t, im1.shape[::-1])
-            mse = np.square(np.subtract(im2,img_by_t)).mean()
-            if mse < min_mse:
-                min_mse = mse
-                tran_mat = tmp_t
-                theta = t
-        return theta
-
-    t = findTheta()
-    tmp_t = np.array([[math.cos(t), math.sin(t), 0],
-                      [-math.sin(t), math.cos(t), 0],
-                      [0, 0, 1]], dtype=np.float64)
-
-    img_back = cv2.warpPerspective(im2, tmp_t, im2.shape[::-1])
-    T = findTranslationLK(im1, img_back)
-
-    ans = np.array([[math.cos(t), -math.sin(t), T[0,2]],
-                      [math.sin(t), math.cos(t), T[1,2]],
-                      [0, 0, 1]], dtype=np.float64)
-
-    return ans
+    return findRigid(im1, im2, method=findTranslationLK)
 
 
+# ------------------ Translation & Rigid by correlation ----------------------
 
+def opticalFlowNCC(im1: np.ndarray, im2: np.ndarray, step_size, win_size):
+    h = win_size // 2  # half of win
+    uv = np.zeros((im1.shape[0], im1.shape[1], 2))  # for each pixel insert uv
 
-def opticalFlowCrossCorr(im1: np.ndarray, im2: np.ndarray, step_size, win_size):
-    half = win_size // 2
-    uvs = np.zeros((*im1.shape, 2))
-    im1 = cv2.copyMakeBorder(im1, half, half, half,
-                             half, borderType=cv2.BORDER_CONSTANT, value=0)
-    im2 = cv2.copyMakeBorder(im2, half, half, half,
-                             half, borderType=cv2.BORDER_CONSTANT, value=0)
+    def Max_corr_idx(win: np.ndarray):
+        """
+        win1: img1 curr window (template)
+        norm1: norm of win1
+        (same for img2)
 
-    def argcorrelation(win: np.ndarray):
-        res = cv2.matchTemplate(im2, win, 'cv.TM_CCOEFF')
-        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-        return np.array(max_loc)
+        NCC = (win1-mean(win1) * win2-mean(win2)) / (||win1|| * ||win2||)
 
-    with alive_bar(int((im1.shape[0] - win_size)(im1.shape[1] - win_size) / step_size * 2)) as bar:
-        for y in range(half, im1.shape[0] - half - 1, step_size):
-            for x in range(half, im1.shape[1] - half - 1, step_size):
-                window = im1[y - half: y + half + 1, x - half: x + half + 1]
-                top_correlation = argcorrelation(window)
-                uvs[y - half, x - half] = np.flip(top_correlation - np.array([y, x]))
-                bar()
-    return uvs
+        :param win:
+        :return:
+        """
+        max_corr = -1000
+        corr_idx = (0, 0)
+        win1 = win.copy().flatten() - win.mean()
+        norm1 = np.linalg.norm(win1, 2)  # normalize win1
+
+        # correlate win1 with img2, and sum the corr in current window
+        for i in range(h, im2.shape[0] - h - 1):
+            for j in range(h, im2.shape[1] - h - 1):
+                win2 = im2[i - h: i + h + 1, j - h: j + h + 1]  # get curr window from img2
+                win2 = win2.copy().flatten() - win2.mean()
+                norm2 = np.linalg.norm(win2, 2)  # normalize win2
+                norms = norm1 * norm2  # ||win1|| * ||win2||
+                corr = 0 if norms == 0 else np.sum(win1 * win2) / norms  # correlation sum
+
+                # take the window that maximize the corr
+                if corr > max_corr:
+                    max_corr = corr
+                    corr_idx = (i, j)  # top left pixels of curr window
+        return corr_idx
+
+    # each iteration take window from img2, and send to 'Max_corr_idx()' to find template matching
+    for y in range(h, im1.shape[0] - h - 1, step_size):
+        for x in range(h, im1.shape[1] - h - 1, step_size):
+            template = im1[y - h: y + h + 1, x - h: x + h + 1]
+            index = Max_corr_idx(template)  # index of best 'template matching' in img2
+            uv[y - h, x - h] = np.flip(index - np.array([y, x]))
+
+    return uv
 
 
 def findTranslationCorr(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     """
-    :param im1: input image 1 in grayscale format.
-    :param im2: image 1 after Translation.
-    :return: Translation matrix by correlation.
+    take median u,v from 'opticalFlowNCC()'
+    :param im1: origin img
+    :param im2: translated img
+    :return: translation matrix
     """
-    uvs = opticalFlowCrossCorr(im1, im2, 15, 9)
-    u, v = np.ma.mean(np.ma.masked_where(
-        uvs == np.zeros((2)), uvs), axis=(0, 1)).filled(0)
-    return np.array([[1, 0, u],
-                     [0, 1, v],
-                     [0, 0, 1]])
-
-
-# def FindCorr(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
-#     """
-#     :param im1: input image 1 in grayscale format.
-#     :param im2: image 1 after Translation.
-#     :return: Translation matrix by correlation.
-#     """
-#     win_size = 5
-#     step_size = 5
-#     half = win_size // 2
-#     UV = []
-#
-#     def corrlation(im1_win: np.ndarray, y_in, x_in):
-#         # im2_borders = cv2.copyMakeBorder(im2, half, half, half,
-#         #                                  half, borderType=cv2.BORDER_CONSTANT, value=0)
-#         max_corr = np.zeros_like(im1_win)
-#         uv = []
-#         a = (im1_win - np.mean(im1_win)) / (np.std(im1_win) * len(im1_win))
-#         for y in range(half, im2.shape[0] - half - 1, step_size):
-#             for x in range(half, im2.shape[1] - half - 1, step_size):
-#                 win2 = im2[y - half: y + half + 1, x - half: x + half + 1]
-#                 b = (win2 - np.mean(win2)) / (np.std(win2))
-#                 c = signal.correlate2d(a, b, 'same')
-#                 if c.sum() > max_corr.sum():
-#                     max_corr = c
-#                     uv = (y_in - (y - half), x_in - (x - half))
-#         return uv
-#
-#     for y in range(half, im1.shape[0] - half - 1, step_size):
-#         for x in range(half, im1.shape[1] - half - 1, step_size):
-#             window = im1[y - half: y + half + 1, x - half: x + half + 1]
-#             top_correlation = corrlation(window, y - half, x - half)
-#             UV.append(top_correlation)
-#     return UV
+    uvs = opticalFlowNCC(im1, im2, 32, 13)  # get uv of all pixels
+    u, v = np.median(np.masked_where(uvs == np.zeros(2), uvs), axis=(0, 1)).filled(0)  # take the median u,v
+    return getWarpMatrix("trans", 0, u, v)
 
 
 def findRigidCorr(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
@@ -279,10 +286,12 @@ def findRigidCorr(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     :param im2: image 1 after Rigid.
     :return: Rigid matrix by correlation.
     """
-    pass
+    return findRigid(im1, im2, findTranslationCorr)
 
 
-def warpImages1(im1: np.ndarray, im2: np.ndarray, T: np.ndarray) -> np.ndarray:
+# ------------------ Warping ----------------------
+
+def warpImages(im1: np.ndarray, im2: np.ndarray, T: np.ndarray) -> np.ndarray:
     """
     :param im1: input image 1 in grayscale format.
     :param im2: input image 2 in grayscale format.
@@ -291,34 +300,27 @@ def warpImages1(im1: np.ndarray, im2: np.ndarray, T: np.ndarray) -> np.ndarray:
     :return: warp image 2 according to T and display both image1
     and the wrapped version of the image2 in the same figure.
     """
-    x = np.arange(0, im2.shape[1])
-    y = np.arange(0, im2.shape[0])
+    if im1.ndim == 3:  # RGB img
+        im1 = cv2.cvtColor(im1, cv2.COLOR_BGR2GRAY)
+        im2 = cv2.cvtColor(im2, cv2.COLOR_BGR2GRAY)
+    img_warp = np.zeros(im2.shape)
+    T_pinv = np.linalg.pinv(T)
+    for i in range(im2.shape[0]):
+        for j in range(im2.shape[1]):
+            new_index = np.array([i, j, 1])
+            newarr = T_pinv @ new_index
+            x = newarr[0].astype(int) // newarr[2].astype(int)
+            y = newarr[1].astype(int) // newarr[2].astype(int)
 
-    x, y = np.meshgrid(y, x)
-    x = x.flatten()
-    y = y.flatten()
-    z = np.ones_like(x)
+            if 0 <= x < im1.shape[0] and 0 <= y < im1.shape[1]:
+                img_warp[i, j] = im1[x, y]
 
-    A = np.vstack((x, y, z))
-    M = np.matmul(np.linalg.pinv(T), A)
-
-    Ix = (M[0] / M[2]).astype(np.uint8).reshape(im1.shape)
-    Iy = (M[1] / M[2]).astype(np.uint8).reshape(im1.shape)
-
-    # imgNew = np.zeros_like(im1)
-    imgNew = im1[Ix, Iy]
-
-    i = 0
-    for y in range(im1.shape[1]):
-        for x in range(im1.shape[0]):
-            s = Ix[i]
-            r = Iy[i]
-            imgNew[x, y] = im1[Ix[i], Iy[i]]
-            i += 1
-    return imgNew
+    plt.imshow(img_warp)
+    plt.show()
+    return img_warp
 
 
-def warpImages(im1: np.ndarray, im2: np.ndarray, T: np.ndarray) -> np.ndarray:
+def warpImages1(im1: np.ndarray, im2: np.ndarray, T: np.ndarray) -> np.ndarray:
     tx = int(T[0, 2])
     ty = int(T[1, 2])
     new_img = np.zeros_like(im1)
