@@ -1,3 +1,4 @@
+import math
 import sys
 from typing import List
 
@@ -165,7 +166,39 @@ def findRigidLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     :param im2: image 1 after Rigid.
     :return: Rigid matrix by LK.
     """
-    pass
+
+    def findTheta() -> float:
+        min_mse = 1000
+        tran_mat = np.zeros((3, 3))
+        theta = 0
+
+        for t in range(360):
+            tmp_t = np.array([[math.cos(t), -math.sin(t), 0],
+                              [math.sin(t), math.cos(t), 0],
+                              [0, 0, 1]], dtype=np.float64)
+            img_by_t = cv2.warpPerspective(im1, tmp_t, im1.shape[::-1])
+            mse = np.square(np.subtract(im2,img_by_t)).mean()
+            if mse < min_mse:
+                min_mse = mse
+                tran_mat = tmp_t
+                theta = t
+        return theta
+
+    t = findTheta()
+    tmp_t = np.array([[math.cos(t), math.sin(t), 0],
+                      [-math.sin(t), math.cos(t), 0],
+                      [0, 0, 1]], dtype=np.float64)
+
+    img_back = cv2.warpPerspective(im2, tmp_t, im2.shape[::-1])
+    T = findTranslationLK(im1, img_back)
+
+    ans = np.array([[math.cos(t), -math.sin(t), T[0,2]],
+                      [math.sin(t), math.cos(t), T[1,2]],
+                      [0, 0, 1]], dtype=np.float64)
+
+    return ans
+
+
 
 
 def opticalFlowCrossCorr(im1: np.ndarray, im2: np.ndarray, step_size, win_size):
