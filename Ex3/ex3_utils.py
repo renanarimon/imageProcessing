@@ -8,7 +8,6 @@ from numpy.linalg import LinAlgError
 
 from scipy import signal
 import matplotlib.pyplot as plt
-from alive_progress import alive_bar
 
 
 def myID() -> np.int:
@@ -300,38 +299,21 @@ def warpImages(im1: np.ndarray, im2: np.ndarray, T: np.ndarray) -> np.ndarray:
     :return: warp image 2 according to T and display both image1
     and the wrapped version of the image2 in the same figure.
     """
-    if im1.ndim == 3:  # RGB img
-        im1 = cv2.cvtColor(im1, cv2.COLOR_BGR2GRAY)
+    if im2.ndim == 3:  # RGB img
         im2 = cv2.cvtColor(im2, cv2.COLOR_BGR2GRAY)
     img_warp = np.zeros(im2.shape)
-    T_pinv = np.linalg.pinv(T)
+    TP = np.linalg.pinv(T)
     for i in range(im2.shape[0]):
         for j in range(im2.shape[1]):
-            new_index = np.array([i, j, 1])
-            newarr = T_pinv @ new_index
-            x = newarr[0].astype(int) // newarr[2].astype(int)
-            y = newarr[1].astype(int) // newarr[2].astype(int)
+            curr_idx = np.array([i, j, 1])  # curr index in new_img
+            idx_orig = TP @ curr_idx  # this pixel index after rotation in im2
+            x = (idx_orig[0] // idx_orig[2]).astype(int)  # back to 2D
+            y = (idx_orig[1] // idx_orig[2]).astype(int)  # back to 2D
 
-            if 0 <= x < im1.shape[0] and 0 <= y < im1.shape[1]:
-                img_warp[i, j] = im1[x, y]
+            if 0 <= x < im2.shape[0] and 0 <= y < im2.shape[1]:  # if index is in img range
+                img_warp[i, j] = im2[x, y]  # insert pixel to new_img
 
-    plt.imshow(img_warp)
-    plt.show()
     return img_warp
-
-
-def warpImages1(im1: np.ndarray, im2: np.ndarray, T: np.ndarray) -> np.ndarray:
-    tx = int(T[0, 2])
-    ty = int(T[1, 2])
-    new_img = np.zeros_like(im1)
-    h, w = new_img.shape[0], new_img.shape[1]
-    for i in range(w):
-        for j in range(h):
-            r = j - ty
-            s = i - tx
-            if 0 <= r < im1.shape[0] and 0 <= s < im1.shape[1]:
-                new_img[j, i] = im1[r, s]
-    return new_img
 
 
 # ---------------------------------------------------------------------------
