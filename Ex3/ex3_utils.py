@@ -137,16 +137,16 @@ def getWarpMatrix(method, theta, tx, ty) -> np.ndarray:
     :return: correct warping matrix
     """
     if method == "rigid":
-        return np.array([[math.cos(theta), -math.sin(theta), tx],
-                         [math.sin(theta), math.cos(theta), ty],
+        return np.array([[np.cos(theta), -np.sin(theta), tx],
+                         [np.sin(theta), np.cos(theta), ty],
                          [0, 0, 1]], dtype=np.float64)
     elif method == "trans":
         return np.array([[1, 0, tx],
                          [0, 1, ty],
                          [0, 0, 1]], dtype=np.float64)
     elif method == "rigid_opp":
-        return np.array([[math.cos(theta), math.sin(theta), 0],
-                         [-math.sin(theta), math.cos(theta), 0],
+        return np.array([[np.cos(theta), np.sin(theta), 0],
+                         [-np.sin(theta), np.cos(theta), 0],
                          [0, 0, 1]], dtype=np.float64)
 
 
@@ -195,29 +195,18 @@ def findTranslationLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     return getWarpMatrix("trans", 0, u1, v1)
 
 
-def findRigid(im1: np.ndarray, im2: np.ndarray, method) -> np.ndarray:
-    """
-    Help function for  rigidLK & rigidCorr
-    :param im1: origin img
-    :param im2: rigid img
-    :param method: translation Lk / corr
-    :return: rigid matrix from im1 to im2
-    """
-    theta = findTheta(im1, im2)  # find theta
-    matrix_rigid_opp = getWarpMatrix("rigid_opp", theta, 0, 0)  # matrix to rotate img back to origin
-    img_back = cv2.warpPerspective(im2, matrix_rigid_opp, im2.shape[::-1])  # rotate img back to origin
-    T = method(im1, img_back)  # find translation matrix
-
-    return getWarpMatrix("rigid", theta, T[0, 2], T[1, 2])  # rigid matrix: translation+rotation
-
-
 def findRigidLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     """
-    :param im1: input image 1 in grayscale format.
-    :param im2: image 1 after Rigid.
-    :return: Rigid matrix by LK.
+    :param im1: origin img
+    :param im2: rigid img
+    :return: rigid matrix from im1 to im2
     """
-    return findRigid(im1, im2, method=findTranslationLK)
+
+    theta = findTheta(im1, im2)  # find theta
+    matrix_rigid = getWarpMatrix("rigid_opp", theta, 0, 0)  # matrix to rotate img back to origin
+    revers_img = cv2.warpPerspective(im2, matrix_rigid, im2.shape[::-1])
+    T = findTranslationLK(im1, revers_img)  # find translation matrix
+    return getWarpMatrix("rigid", theta, T[0, 2], T[1, 2])  # rigid matrix: translation+rotation
 
 
 # ------------------ Translation & Rigid by correlation ----------------------
@@ -261,6 +250,8 @@ def opticalFlowNCC(im1: np.ndarray, im2: np.ndarray, step_size, win_size):
     for y in range(h, im1.shape[0] - h - 1, step_size):
         for x in range(h, im1.shape[1] - h - 1, step_size):
             template = im1[y - h: y + h + 1, x - h: x + h + 1]
+            if cv2.countNonZero(template) == 0:
+                continue
             index = Max_corr_idx(template)  # index of best 'template matching' in img2
             uv[y - h, x - h] = np.flip(index - np.array([y, x]))
 
@@ -275,7 +266,8 @@ def findTranslationCorr(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     :return: translation matrix
     """
     uvs = opticalFlowNCC(im1, im2, 32, 13)  # get uv of all pixels
-    u, v = np.median(np.masked_where(uvs == np.zeros(2), uvs), axis=(0, 1)).filled(0)  # take the median u,v
+    u, v = np.ma.median(np.ma.masked_where(
+        uvs == np.zeros((2)), uvs), axis=(0, 1)).filled(0)  # take the median u,v
     return getWarpMatrix("trans", 0, u, v)
 
 
@@ -285,7 +277,12 @@ def findRigidCorr(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     :param im2: image 1 after Rigid.
     :return: Rigid matrix by correlation.
     """
-    return findRigid(im1, im2, findTranslationCorr)
+    theta = findTheta(im1, im2)  # find theta
+    matrix_rigid = getWarpMatrix("rigid", theta, 0, 0)  # matrix to rotate img back to origin
+    revers_img = cv2.warpPerspective(im1, matrix_rigid, im1.shape[::-1])
+    T = findTranslationCorr(im2, revers_img)  # find translation matrix
+
+    return getWarpMatrix("rigid", theta, T[0, 2], T[1, 2])  # rigid matrix: translation+rotation
 
 
 # ------------------ Warping ----------------------

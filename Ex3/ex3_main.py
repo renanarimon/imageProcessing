@@ -5,6 +5,7 @@ from ex3_utils import *
 import time
 import matplotlib.pyplot as plt
 
+
 # ---------------------------------------------------------------------------
 # ------------------------ Lucas Kanade optical flow ------------------------
 # ---------------------------------------------------------------------------
@@ -12,7 +13,6 @@ import matplotlib.pyplot as plt
 
 def lkDemo(img_path):
     print("LK Demo")
-
     img_1 = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY)
     img_1 = cv2.resize(img_1, (0, 0), fx=.5, fy=0.5)
     t = np.array([[1, 0, -.2],
@@ -123,16 +123,17 @@ def imageWarpingDemo(img_path):
     :return:
     """
     print("Image Warping Demo")
-    print("")
     orig_img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY)
-    # tran_img = cv2.cvtColor(cv2.imread('input/TransHome.jpg'), cv2.COLOR_BGR2GRAY)
-    # orig_img = cv2.resize(orig_img, (0, 0), fx=.5, fy=0.5)
     # tranLkTest(orig_img)
-    # tranRigidLKTest(orig_img)
-    WarpImageTest(img_path)
+    rigidLKTest(orig_img)
+    # tranCorrTest(orig_img)
+    # rigidCorrTest(orig_img)
+    # WarpImageTest(orig_img)
 
 
 def tranLkTest(orig_img):
+    print("tranLkTest Demo")
+    # orig_img = cv2.resize(orig_img, (140, 140), interpolation=cv2.INTER_LINEAR)
     t = np.array([[1, 0, -2],
                   [0, 1, -4],
                   [0, 0, 1]], dtype=np.float64)
@@ -149,15 +150,16 @@ def tranLkTest(orig_img):
     print("mse = ", np.square(tran_img - img_2).mean())
 
 
-def tranRigidLKTest(img1):
+def rigidLKTest(img1):
+    print("rigidLKTest Demo")
     theta = 45
     t = np.array([[np.cos(theta), -np.sin(theta), 2],
                   [np.sin(theta), np.cos(theta), 4],
                   [0, 0, 1]], dtype=np.float64)
     tran_img = cv2.warpPerspective(img1, t, img1.shape[::-1])
     tran_lk_ri = findRigidLK(img1, tran_img)
-    print("the  original transformation matrix", t)
-    print("the transformation matrix after: ", tran_lk_ri)
+    print("the  original transformation matrix\n", t)
+    print("the transformation matrix after: \n", tran_lk_ri)
     f, ax = plt.subplots(2)
     plt.gray()
     img_2 = cv2.warpPerspective(img1, tran_lk_ri, img1.shape[::-1])
@@ -170,9 +172,54 @@ def tranRigidLKTest(img1):
     print("mse = ", MSE)
 
 
-def WarpImageTest(img_path):
+def tranCorrTest(img_path):
+    print("tranCorrTest Demo")
+    orig_img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY)
+    orig_img = cv2.resize(orig_img, (140, 140), interpolation=cv2.INTER_LINEAR)
+    t = np.array([[1, 0, -4],
+                  [0, 1, -2],
+                  [0, 0, 1]], dtype=np.float64)
+    tran_img = cv2.warpPerspective(orig_img, t, orig_img.shape[::-1])
+    time_start = time.time()
+    tran = findTranslationCorr(orig_img, tran_img)
+    print(tran)
+    print("time :", time.time() - time_start)
+    img_2 = cv2.warpPerspective(orig_img, tran, orig_img.shape[::-1])  # with the new translation matrix
+    f, ax = plt.subplots(2)
+    plt.gray()
+    ax[0].imshow(tran_img)
+    ax[0].set_title('by origin tran matrix')
+    ax[1].imshow(img_2)
+    ax[1].set_title('by finding the tran matrix')
+    plt.show()
+    print("mse = ", np.square(tran_img - img_2).mean())
+
+
+def rigidCorrTest(orig_img):
+    print("rigidCorrTest Demo")
+    orig_img = cv2.resize(orig_img, (150, 150), interpolation=cv2.INTER_LINEAR)
+    theta = 45
+    t = np.array([[np.cos(theta), -np.sin(theta), 0],
+                  [np.sin(theta), np.cos(theta), 0],
+                  [0, 0, 1]], dtype=np.float64)
+    tran_img = cv2.warpPerspective(orig_img, t, orig_img.shape[::-1])
+    time_start = time.time()
+    tran = findRigidCorr(orig_img, tran_img)
+    print(tran)
+    print("time :", time.time() - time_start)
+    img_2 = cv2.warpPerspective(orig_img, tran, orig_img.shape[::-1])  # with the new translation matrix
+    f, ax = plt.subplots(2)
+    plt.gray()
+    ax[0].imshow(tran_img)
+    ax[0].set_title('by origin tran matrix')
+    ax[1].imshow(img_2)
+    ax[1].set_title('by finding the tran matrix')
+    plt.show()
+    print("mse = ", np.square(tran_img - img_2).mean())
+
+
+def WarpImageTest(orig_img):
     print("warp image test")
-    orig_img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY)/255
     orig_img = cv2.resize(orig_img, (0, 0), fx=.5, fy=0.5)
     t_trans = np.array([[1, 0, 20],
                         [0, 1, 40],
@@ -199,29 +246,6 @@ def WarpImageTest(img_path):
     ax[2].set_title('my warping - back to orig')
 
     plt.show()
-
-
-def findTranslationLK_test(img_path):
-    orig_img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY)
-    # orig_img = cv2.resize(orig_img, (0, 0), fx=.5, fy=0.5)
-    t = np.array([[1, 0, -2],
-                  [0, 1, -4],
-                  [0, 0, 1]], dtype=np.float64)
-    tran_img = cv2.warpPerspective(orig_img, t, orig_img.shape[::-1])
-    time_start = time.time()
-    tran = findTranslationCorr(orig_img, tran_img)
-    print(tran)
-    print(time.time() - time_start)
-    img_2 = cv2.warpPerspective(orig_img, tran, orig_img.shape[::-1])  # with the new translation matrix
-    f, ax = plt.subplots(2)
-    plt.gray()
-
-    ax[0].imshow(tran_img)
-    ax[0].set_title('Original Image')
-    ax[1].imshow(img_2)
-    ax[1].set_title('new Image')
-    plt.show()
-    print("mse = ", np.square(tran_img - img_2).mean())
 
 
 # ---------------------------------------------------------------------------
@@ -296,14 +320,11 @@ def main():
     print("ID:", myID())
 
     img_path = 'input/boxMan.jpg'
-    img_path_warp = 'input/home_orig_optimized.jpg'
     # lkDemo(img_path)
-    # findTranslationLK_test(img_path_warp)
     # hierarchicalkDemo(img_path)
     # compareLK(img_path)
-    #
+
     imageWarpingDemo(img_path)
-    #
 
     # pyrGaussianDemo('input/pyr_bit.jpg')
     # pyrLaplacianDemo('input/pyr_bit.jpg')
