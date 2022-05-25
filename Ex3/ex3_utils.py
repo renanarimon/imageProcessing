@@ -204,8 +204,8 @@ def findRigidLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
 
     theta = findTheta(im1, im2)  # find theta
     matrix_rigid = getWarpMatrix("rigid_opp", theta, 0, 0)  # matrix to rotate img back to origin
-    revers_img = cv2.warpPerspective(im2, matrix_rigid, im2.shape[::-1])
-    T = findTranslationLK(im1, revers_img)  # find translation matrix
+    rotate_img = cv2.warpPerspective(im2, matrix_rigid, im2.shape[::-1]) # rotate im2 back to im1
+    T = findTranslationLK(im1, rotate_img)  # find translation matrix
     return getWarpMatrix("rigid", theta, T[0, 2], T[1, 2])  # rigid matrix: translation+rotation
 
 
@@ -267,7 +267,7 @@ def findTranslationCorr(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     """
     uvs = opticalFlowNCC(im1, im2, 32, 13)  # get uv of all pixels
     u, v = np.ma.median(np.ma.masked_where(
-        uvs == np.zeros((2)), uvs), axis=(0, 1)).filled(0)  # take the median u,v
+        uvs == np.zeros(2), uvs), axis=(0, 1)).filled(0)  # take the median u,v
     return getWarpMatrix("trans", 0, u, v)
 
 
