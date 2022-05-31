@@ -48,28 +48,26 @@ def disparityNC(img_l: np.ndarray, img_r: np.ndarray, disp_range: (int, int), k_
     half = k_size // 2
     for x in range(half, img_l.shape[0] - half):
         for y in range(half, img_l.shape[1] - half):
-            win_l = img_l[x - half:x + half + 1, y - half:y + half + 1]
+            winl = img_l[x - half:x + half + 1, y - half:y + half + 1]
+            win_l = winl.copy().flatten() - winl.mean()
+            norm1 = np.linalg.norm(win_l, 2)  # normalize win1
             NCC = -1
             disparity = 0
             for d in range(disp_range[0], disp_range[1]):
                 NCC_tmp = 0
-                R_lr = 0
-                R_rr = 0
-                R_ll = 0
                 if (y - half - d) >= 0 and (y + half + 1 - d) < img_r.shape[1]:
-                    win_r = img_r[x - half:x + half + 1, y - half - d:y + half + 1 - d]
-                    for u in range(k_size):
-                        for v in range(k_size):
-                            R_lr += win_l[u, v] * win_r[u, v]
-                            R_rr += win_r[u, v] * win_r[u, v]
-                            R_ll += win_l[u, v] * win_l[u, v]
-                    NCC_tmp = 0 if np.sqrt(R_rr, R_ll) == 0 else R_lr / np.sqrt(R_rr, R_ll)
+                    winr = img_r[x - half:x + half + 1, y - half - d:y + half + 1 - d]
+                    win_r = winr.copy().flatten() - winr.mean()
+                    norm2 = np.linalg.norm(win_r, 2)  # normalize win2
+                    norms = norm1 * norm2  # ||win1|| * ||win2||
+                    NCC_tmp = 0 if norms == 0 else np.sum(win_l * win_r) / norms  # correlation sum
 
                 if NCC_tmp > NCC:
                     NCC = NCC_tmp
                     disparity = d
             disparity_map[x, y] = disparity
 
+    x= disparity_map
     return disparity_map
 
 
