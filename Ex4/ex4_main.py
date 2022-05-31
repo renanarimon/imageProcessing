@@ -1,4 +1,7 @@
 import os
+
+import matplotlib.pyplot as plt
+
 from ex4_utils import *
 import cv2
 
@@ -18,13 +21,13 @@ def main():
     # Read images
     i = 0
     L = cv2.imread(os.path.join('input', 'pair%d-L.png' % i), 0) / 255.0
-    R = cv2.imread(os.path.join('input', 'pair%d-R.png' % i), 0) / 255.0
+    R = cv2.imread(os.path.join('input', 'pair%d-R.png' % i),0) / 255.0
 
     # Display depth SSD
-    displayDepthImage(L, R, (0, 4), method=disparitySSD)
+    # displayDepthImage(L, R, (0, 4), method=disparitySSD)
 
     # Display depth NC
-    # displayDepthImage(L, R, (0, 4), method=disparityNC)
+    displayDepthImage(L, R, (0, 4), method=disparityNC)
     #
     # src = np.array([[279, 552],
     #                 [372, 559],

@@ -1,3 +1,4 @@
+import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
@@ -14,27 +15,27 @@ def disparitySSD(img_l: np.ndarray, img_r: np.ndarray, disp_range: (int, int), k
     """
     disparity_map = np.zeros((img_l.shape[0], img_l.shape[1]))
     half = k_size // 2
-    for i in range(half, img_l.shape[0] - half):
-        for j in range(half, img_l.shape[1] - half):
-            win_l = img_l[i - half:i + half + 1, j - half:j + half + 1]
+    for x in range(half, img_l.shape[0] - half):
+        for y in range(half, img_l.shape[1] - half):
+            win_l = img_l[x - half:x + half + 1, y - half:y + half + 1]
             ssd = sys.maxsize
             disparity = 0
             for d in range(disp_range[0], disp_range[1]):
                 ssd_tmp = 0
-                if (i - half - d) >= 0 and (i + half + 1 - d) < img_r.shape[1]:
-                    win_r = img_r[i - half - d:i + half + 1 - d, j - half:j + half + 1]
+                if (y - half - d) >= 0 and (y + half + 1 - d) < img_r.shape[1]:
+                    win_r = img_r[x - half:x + half + 1, y - half - d:y + half + 1 - d]
                     for u in range(k_size):
                         for v in range(k_size):
                             ssd_tmp += (win_l[u, v] - win_r[u, v]) ** 2
                 if ssd_tmp < ssd:
                     ssd = ssd_tmp
                     disparity = d
-            disparity_map[i, j] = disparity
+            disparity_map[x, y] = disparity
 
     return disparity_map
 
 
-def disparityNC(img_l: np.ndarray, img_r: np.ndarray, disp_range: int, k_size: int) -> np.ndarray:
+def disparityNC(img_l: np.ndarray, img_r: np.ndarray, disp_range: (int, int), k_size: int) -> np.ndarray:
     """
     img_l: Left image
     img_r: Right image
@@ -43,7 +44,34 @@ def disparityNC(img_l: np.ndarray, img_r: np.ndarray, disp_range: int, k_size: i
 
     return: Disparity map, disp_map.shape = Left.shape
     """
-    pass
+    disparity_map = np.zeros((img_l.shape[0], img_l.shape[1]))
+    half = k_size // 2
+    for x in range(half, img_l.shape[0] - half):
+        for y in range(half, img_l.shape[1] - half):
+            win_l = img_l[x - half:x + half + 1, y - half:y + half + 1]
+            NCC = -1
+            disparity = 0
+            for d in range(disp_range[0], disp_range[1]):
+                NCC_tmp = 0
+                R_lr = 0
+                R_rr = 0
+                R_ll = 0
+                if (y - half - d) >= 0 and (y + half + 1 - d) < img_r.shape[1]:
+                    win_r = img_r[x - half:x + half + 1, y - half - d:y + half + 1 - d]
+                    for u in range(k_size):
+                        for v in range(k_size):
+                            R_lr += win_l[u, v] * win_r[u, v]
+                            R_rr += win_r[u, v] * win_r[u, v]
+                            R_ll += win_l[u, v] * win_l[u, v]
+                    NCC_tmp = 0 if np.sqrt(R_rr, R_ll) == 0 else R_lr / np.sqrt(R_rr, R_ll)
+
+                if NCC_tmp > NCC:
+                    NCC = NCC_tmp
+                    disparity = d
+            disparity_map[x, y] = disparity
+
+    return disparity_map
+
 
 
 def computeHomography(src_pnt: np.ndarray, dst_pnt: np.ndarray) -> (np.ndarray, float):
