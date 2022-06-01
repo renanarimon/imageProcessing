@@ -92,6 +92,7 @@ def computeHomography(src_pnt: np.ndarray, dst_pnt: np.ndarray) -> (np.ndarray, 
 
     return: (Homography matrix shape:[3,3], Homography error)
     """
+    #
     A = []
     for i in range(src_pnt.shape[0]):
         Xs, Ys = src_pnt[i]
@@ -101,13 +102,13 @@ def computeHomography(src_pnt: np.ndarray, dst_pnt: np.ndarray) -> (np.ndarray, 
 
     A = np.array(A)
 
-    eig_vals, eig_vecs = np.linalg.eig(A.T @ A)
-    eig_min = np.argmin(eig_vals)
-    H = eig_vecs[eig_min]
-    H = H.reshape((3, 3))
-    H[2, 2] = 1.0
-    M = (H / H[2, :])[0:2]
-    error = np.sqrt(sum((M.dot(src_pnt) - dst_pnt) ** 2))  # TODO: mat size not natch!
+    _, _, vh = np.linalg.svd(A) # SVD
+    H = (vh[-1].reshape((3,3)) / vh[-1,-1]) #
+    homo_src = np.vstack((src_pnt.T, np.ones(src_pnt.shape[0])))
+    homo_dst = np.vstack((dst_pnt.T, np.ones(dst_pnt.shape[0])))
+    t = H.dot(homo_src)
+
+    error = np.sqrt(np.sum((t/t[-1] - homo_dst) ** 2))
     return H, error
 
 
