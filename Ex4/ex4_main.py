@@ -1,6 +1,7 @@
 import os
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 from ex4_utils import *
 import cv2
@@ -19,15 +20,15 @@ def main():
     print("ID:", 207616830)
 
     # Read images
-    i = 0
-    L = cv2.imread(os.path.join('input', 'pair%d-L.png' % i), 0) / 255.0
-    R = cv2.imread(os.path.join('input', 'pair%d-R.png' % i),0) / 255.0
+    # i = 0
+    # L = cv2.imread(os.path.join('input', 'pair%d-L.png' % i), 0) / 255.0
+    # R = cv2.imread(os.path.join('input', 'pair%d-R.png' % i),0) / 255.0
 
     # Display depth SSD
-    displayDepthImage(L, R, (0, 4), method=disparitySSD)
+    # displayDepthImage(L, R, (0, 4), method=disparitySSD)
 
     # Display depth NC
-    displayDepthImage(L, R, (0, 4), method=disparityNC)
+    # displayDepthImage(L, R, (0, 4), method=disparityNC)
     #
     # src = np.array([[279, 552],
     #                 [372, 559],
@@ -41,11 +42,18 @@ def main():
     #
     # print(h, error)
     #
-    # dst = cv2.imread(os.path.join('input', 'billBoard.jpg'))[:, :, [2, 1, 0]] / 255.0
-    # src = cv2.imread(os.path.join('input', 'car.jpg'))[:, :, [2, 1, 0]] / 255.0
+    dst = cv2.imread(os.path.join('input', 'billBoard.jpg'))[:, :, [2, 1, 0]] / 255.0
+    src = cv2.imread(os.path.join('input', 'car.jpg'))[:, :, [2, 1, 0]] / 255.0
     #
-    # warpImag(src, dst)
+    warpImag(src, dst)
 
 
 if __name__ == '__main__':
     main()
+    #
+    # A = np.array([[2,4,6], [3,5,7], [2,3,4]])
+    # print(A)
+    #
+    # B = (A / A[2,:])[0:2]
+    #
+    # print(B.shape)

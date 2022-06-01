@@ -92,7 +92,23 @@ def computeHomography(src_pnt: np.ndarray, dst_pnt: np.ndarray) -> (np.ndarray, 
 
     return: (Homography matrix shape:[3,3], Homography error)
     """
-    pass
+    A = []
+    for i in range(src_pnt.shape[0]):
+        Xs, Ys = src_pnt[i]
+        Xd, Yd = dst_pnt[i]
+        A.append([Xs, Ys, 1, 0, 0, 0, -Xd * Xs, -Xd * Ys, -Xd])
+        A.append([0, 0, 0, Xs, Ys, 1, -Yd * Xs, -Yd * Ys, -Yd])
+
+    A = np.array(A)
+
+    eig_vals, eig_vecs = np.linalg.eig(A.T @ A)
+    eig_min = np.argmin(eig_vals)
+    H = eig_vecs[eig_min]
+    H = H.reshape((3, 3))
+    H[2, 2] = 1.0
+    M = (H / H[2, :])[0:2]
+    error = np.sqrt(sum((M.dot(src_pnt) - dst_pnt) ** 2))  # TODO: mat size not natch!
+    return H, error
 
 
 def warpImag(src_img: np.ndarray, dst_img: np.ndarray) -> None:
