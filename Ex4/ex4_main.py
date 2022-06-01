@@ -24,7 +24,7 @@ def main():
     R = cv2.imread(os.path.join('input', 'pair%d-R.png' % i),0) / 255.0
 
     # Display depth SSD
-    # displayDepthImage(L, R, (0, 4), method=disparitySSD)
+    displayDepthImage(L, R, (0, 4), method=disparitySSD)
 
     # Display depth NC
     displayDepthImage(L, R, (0, 4), method=disparityNC)
