@@ -92,23 +92,24 @@ def computeHomography(src_pnt: np.ndarray, dst_pnt: np.ndarray) -> (np.ndarray, 
 
     return: (Homography matrix shape:[3,3], Homography error)
     """
-    #
+    # create A - calibration matrix
     A = []
     for i in range(src_pnt.shape[0]):
         Xs, Ys = src_pnt[i]
         Xd, Yd = dst_pnt[i]
         A.append([Xs, Ys, 1, 0, 0, 0, -Xd * Xs, -Xd * Ys, -Xd])
         A.append([0, 0, 0, Xs, Ys, 1, -Yd * Xs, -Yd * Ys, -Yd])
-
     A = np.array(A)
 
-    _, _, vh = np.linalg.svd(A) # SVD
-    H = (vh[-1].reshape((3,3)) / vh[-1,-1]) #
-    homo_src = np.vstack((src_pnt.T, np.ones(src_pnt.shape[0])))
-    homo_dst = np.vstack((dst_pnt.T, np.ones(dst_pnt.shape[0])))
-    t = H.dot(homo_src)
+    _, _, vh = np.linalg.svd(A)  # SVD
+    H = (vh[-1].reshape((3, 3)) / vh[-1, -1])  # Homography matrix
 
-    error = np.sqrt(np.sum((t/t[-1] - homo_dst) ** 2))
+    # make all matrix in right shape to calc error
+    homo_src = np.vstack((src_pnt.T, np.ones(src_pnt.shape[0])))  # src_pnt.shape[0] x 2 --> 3 x src_pnt.shape[0]
+    homo_dst = np.vstack((dst_pnt.T, np.ones(dst_pnt.shape[0])))
+    pnt_new = H.dot(homo_src)  # trans src points with the Homography matrix
+
+    error = np.sqrt(np.sum((pnt_new / pnt_new[-1] - homo_dst) ** 2))
     return H, error
 
 
