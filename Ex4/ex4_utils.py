@@ -14,7 +14,7 @@ def disparitySSD(img_l: np.ndarray, img_r: np.ndarray, disp_range: (int, int), k
     return: Disparity map, disp_map.shape = Left.shape
     """
     disparity_map = np.zeros((img_l.shape[0], img_l.shape[1]))
-    half = k_size // 2
+    half = k_size
     for x in range(half, img_l.shape[0] - half):
         for y in range(half, img_l.shape[1] - half):
             win_l = img_l[x - half:x + half + 1, y - half:y + half + 1]
@@ -45,7 +45,7 @@ def disparityNC(img_l: np.ndarray, img_r: np.ndarray, disp_range: (int, int), k_
     return: Disparity map, disp_map.shape = Left.shape
     """
     disparity_map = np.zeros((img_l.shape[0], img_l.shape[1]))
-    half = k_size // 2
+    half = k_size
     for x in range(half, img_l.shape[0] - half):
         for y in range(half, img_l.shape[1] - half):
             winl = img_l[x - half:x + half + 1, y - half:y + half + 1]
@@ -55,7 +55,7 @@ def disparityNC(img_l: np.ndarray, img_r: np.ndarray, disp_range: (int, int), k_
             disparity = 0
             for d in range(disp_range[0], disp_range[1]):
                 NCC_tmp = 0
-                if (y - half - d) >= 0 and (y + half + 1 - d) < img_r.shape[1]:
+                if (y - half - d) >= 0 and (y + half - d) < img_r.shape[1]:
                     winr = img_r[x - half:x + half + 1, y - half - d:y + half + 1 - d]
                     win_r = winr.copy().flatten() - winr.mean()
                     norm2 = np.linalg.norm(win_r, 2)  # normalize win2
