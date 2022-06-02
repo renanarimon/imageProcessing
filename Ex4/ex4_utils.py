@@ -124,21 +124,56 @@ def warpImag(src_img: np.ndarray, dst_img: np.ndarray) -> None:
 
     output: None.
     """
-    dst_pts = []
-
-    # function to display the coordinates of
-    # of the points clicked on the image
-    def click_event(event, x, y, flags, params):
-        # checking for left mouse clicks
-        if event == cv2.EVENT_LBUTTONDOWN:
-            dst_pts.append((x, y))
-
-    cv2.namedWindow('image', cv2.WINDOW_NORMAL)
-    cv2.imshow('image', dst_img)
-    cv2.setMouseCallback('image', click_event)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    dst_pts = [[302, 272],
+               [156, 1674],
+               [795, 300],
+               [710, 1667]
+               ]
+    src_pts = [[102, 74],
+               [113, 1853],
+               [980, 67],
+               [969, 1819]]
+    # flag = 'dst'
+    #
+    # # function to display the coordinates of
+    # # of the points clicked on the image
+    # def click_event(event, x, y, flags, params):
+    #     # checking for left mouse clicks
+    #     if event == cv2.EVENT_LBUTTONDOWN:
+    #         if flag == 'dst':
+    #             dst_pts.append((y, x))
+    #         elif flag == 'src':
+    #             src_pts.append((y, x))
+    #
+    # cv2.namedWindow('dst_img', cv2.WINDOW_NORMAL)
+    # cv2.imshow('dst_img', dst_img)
+    # cv2.setMouseCallback('dst_img', click_event)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
     dst_pts = np.array(dst_pts)
+    #
+    # flag = 'src'
+    # cv2.namedWindow('src_img', cv2.WINDOW_NORMAL)
+    # cv2.imshow('src_img', src_img)
+    # cv2.setMouseCallback('src_img', click_event)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
+    src_pts = np.array(src_pts)
+
+    print(dst_pts)
+    print(src_pts)
+
+    H, _ = cv2.findHomography(src_pts, dst_pts)
+
+    for i in range(src_pts[0, 1], src_pts[1, 1]):
+        for j in range(src_pts[0, 0], src_pts[2, 0]):
+            homo_pixel = np.array([[i], [j], [1]])
+            idx_new = H.dot(homo_pixel)
+            x, y, _ = (idx_new // idx_new[-1]).astype(int)
+            dst_img[x, y] = src_img[i, j]
+
+    plt.imshow(dst_img)
+    plt.show()
 
     ##### Your Code Here ######
 
