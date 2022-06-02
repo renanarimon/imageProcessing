@@ -30,22 +30,23 @@ def main():
     # Display depth NC
     # displayDepthImage(L, R, (0, 4), method=disparityNC)
     #
-    src = np.array([[279, 552],
-                    [372, 559],
-                    [362, 472],
-                    [277, 469]])
-    dst = np.array([[24, 566],
-                    [114, 552],
-                    [106, 474],
-                    [19, 481]])
-    h, error = computeHomography(src, dst)
-
-    print(h,'\n', error)
+    # src = np.array([[279, 552],
+    #                 [372, 559],
+    #                 [362, 472],
+    #                 [277, 469]])
+    # dst = np.array([[24, 566],
+    #                 [114, 552],
+    #                 [106, 474],
+    #                 [19, 481]])
+    # h, error = computeHomography(src, dst)
     #
-    # dst = cv2.imread(os.path.join('input', 'billBoard.jpg'))[:, :, [2, 1, 0]] / 255.0
-    # src = cv2.imread(os.path.join('input', 'car.jpg'))[:, :, [2, 1, 0]] / 255.0
-    # #
-    # warpImag(src, dst)
+    # print(h,'\n', error)
+    #
+    dst = cv2.imread(os.path.join('input', 'billBoard.jpg'))[:, :, [2, 1, 0]] / 255.0
+    src = cv2.imread(os.path.join('input', 'car.jpg'))[:, :, [2, 1, 0]] / 255.0
+
+    #
+    warpImag(src, dst)
 
 
 if __name__ == '__main__':

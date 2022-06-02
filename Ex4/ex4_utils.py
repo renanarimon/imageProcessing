@@ -124,27 +124,21 @@ def warpImag(src_img: np.ndarray, dst_img: np.ndarray) -> None:
 
     output: None.
     """
+    dst_pts = []
 
-    dst_p = []
-    fig1 = plt.figure()
+    # function to display the coordinates of
+    # of the points clicked on the image
+    def click_event(event, x, y, flags, params):
+        # checking for left mouse clicks
+        if event == cv2.EVENT_LBUTTONDOWN:
+            dst_pts.append((x, y))
 
-    def onclick_1(event):
-        x = event.xdata
-        y = event.ydata
-        print("Loc: {:.0f},{:.0f}".format(x, y))
-
-        plt.plot(x, y, '*r')
-        dst_p.append([x, y])
-
-        if len(dst_p) == 4:
-            plt.close()
-        plt.show()
-
-    # display image 1
-    cid = fig1.canvas.mpl_connect('button_press_event', onclick_1)
-    plt.imshow(dst_img)
-    plt.show()
-    dst_p = np.array(dst_p)
+    cv2.namedWindow('image', cv2.WINDOW_NORMAL)
+    cv2.imshow('image', dst_img)
+    cv2.setMouseCallback('image', click_event)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    dst_pts = np.array(dst_pts)
 
     ##### Your Code Here ######
 
