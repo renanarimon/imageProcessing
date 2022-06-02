@@ -124,40 +124,33 @@ def warpImag(src_img: np.ndarray, dst_img: np.ndarray) -> None:
 
     output: None.
     """
-    dst_pts = [[302, 272],
-               [156, 1674],
-               [795, 300],
-               [710, 1667]
-               ]
-    src_pts = [[102, 74],
-               [113, 1853],
-               [980, 67],
-               [969, 1819]]
-    # flag = 'dst'
-    #
-    # # function to display the coordinates of
-    # # of the points clicked on the image
-    # def click_event(event, x, y, flags, params):
-    #     # checking for left mouse clicks
-    #     if event == cv2.EVENT_LBUTTONDOWN:
-    #         if flag == 'dst':
-    #             dst_pts.append((y, x))
-    #         elif flag == 'src':
-    #             src_pts.append((y, x))
-    #
-    # cv2.namedWindow('dst_img', cv2.WINDOW_NORMAL)
-    # cv2.imshow('dst_img', dst_img)
-    # cv2.setMouseCallback('dst_img', click_event)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+    dst_pts = []
+    src_pts = []
+    flag = 'dst'
+
+    # function to display the coordinates of
+    # of the points clicked on the image
+    def click_event(event, x, y, flags, params):
+        # checking for left mouse clicks
+        if event == cv2.EVENT_LBUTTONDOWN:
+            if flag == 'dst':
+                dst_pts.append((y, x))
+            elif flag == 'src':
+                src_pts.append((y, x))
+
+    cv2.namedWindow('dst_img', cv2.WINDOW_NORMAL)
+    cv2.imshow('dst_img', dst_img)
+    cv2.setMouseCallback('dst_img', click_event)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
     dst_pts = np.array(dst_pts)
-    #
-    # flag = 'src'
-    # cv2.namedWindow('src_img', cv2.WINDOW_NORMAL)
-    # cv2.imshow('src_img', src_img)
-    # cv2.setMouseCallback('src_img', click_event)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+
+    flag = 'src'
+    cv2.namedWindow('src_img', cv2.WINDOW_NORMAL)
+    cv2.imshow('src_img', src_img)
+    cv2.setMouseCallback('src_img', click_event)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
     src_pts = np.array(src_pts)
 
     print(dst_pts)
@@ -170,13 +163,9 @@ def warpImag(src_img: np.ndarray, dst_img: np.ndarray) -> None:
             homo_pixel = np.array([[i], [j], [1]])
             idx_new = H.dot(homo_pixel)
             x, y, _ = (idx_new // idx_new[-1]).astype(int)
-            dst_img[x, y] = src_img[i, j]
+
+            if 0 <= x < dst_img.shape[0] and 0 <= y < dst_img.shape[1]:
+                dst_img[y, x] = src_img[j, i]
 
     plt.imshow(dst_img)
     plt.show()
-
-    ##### Your Code Here ######
-
-    # out = dst_img * mask + src_out * (1 - mask)
-    # plt.imshow(out)
-    # plt.show()
