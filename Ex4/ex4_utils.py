@@ -134,9 +134,9 @@ def warpImag(src_img: np.ndarray, dst_img: np.ndarray) -> None:
         # checking for left mouse clicks
         if event == cv2.EVENT_LBUTTONDOWN:
             if flag == 'dst':
-                dst_pts.append((y, x))
+                dst_pts.append((x, y))
             elif flag == 'src':
-                src_pts.append((y, x))
+                src_pts.append((x, y))
 
     cv2.namedWindow('dst_img', cv2.WINDOW_NORMAL)
     cv2.imshow('dst_img', dst_img)
@@ -158,13 +158,13 @@ def warpImag(src_img: np.ndarray, dst_img: np.ndarray) -> None:
 
     H, _ = cv2.findHomography(src_pts, dst_pts)
 
-    for i in range(src_pts[0, 1], src_pts[1, 1]):
-        for j in range(src_pts[0, 0], src_pts[2, 0]):
+    for i in range(src_pts[0, 0], src_pts[1, 0]):
+        for j in range(src_pts[0, 1], src_pts[2, 1]):
             homo_pixel = np.array([[i], [j], [1]])
             idx_new = H.dot(homo_pixel)
             x, y, _ = (idx_new // idx_new[-1]).astype(int)
 
-            if 0 <= x < dst_img.shape[0] and 0 <= y < dst_img.shape[1]:
+            if 0 <= x < dst_img.shape[1] and 0 <= y < dst_img.shape[0]:
                 dst_img[y, x] = src_img[j, i]
 
     plt.imshow(dst_img)
