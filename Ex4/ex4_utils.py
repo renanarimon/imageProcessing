@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
+import math
 
 
 def disparitySSD(img_l: np.ndarray, img_r: np.ndarray, disp_range: (int, int), k_size: int) -> np.ndarray:
@@ -13,6 +14,12 @@ def disparitySSD(img_l: np.ndarray, img_r: np.ndarray, disp_range: (int, int), k
 
     return: Disparity map, disp_map.shape = Left.shape
     """
+    if img_l.ndim == 3:
+        img_l = img_l[:, :, 0]
+        img_r = img_r[:, :, 0]
+
+    plt.imshow(img_l)
+    plt.show()
     disparity_map = np.zeros((img_l.shape[0], img_l.shape[1]))
 
     # for each pixel in img_l, take a window to compare with img_r
@@ -49,6 +56,10 @@ def disparityNC(img_l: np.ndarray, img_r: np.ndarray, disp_range: (int, int), k_
 
     return: Disparity map, disp_map.shape = Left.shape
     """
+    if img_l.ndim == 3:
+        img_l = img_l[:, :, 0]
+        img_r = img_r[:, :, 0]
+
     disparity_map = np.zeros((img_l.shape[0], img_l.shape[1]))  # best disparity for each pixel
 
     # for each pixel in img_l, take a window to compare with img_r
@@ -113,6 +124,24 @@ def computeHomography(src_pnt: np.ndarray, dst_pnt: np.ndarray) -> (np.ndarray, 
     return H, error
 
 
+def toRect(l: list):
+    """
+    help function for warpImage
+    reorder 4 coordinate to rectangle
+    """
+    mlat = np.sum(x[0] for x in l) / len(l)
+    mlng = sum(x[1] for x in l) / len(l)
+
+    def algo(x):
+        return (math.atan2(x[0] - mlat, x[1] - mlng) + 2 * math.pi) % (2 * math.pi)
+
+    l.sort(key=algo)
+    tmp = l[0]
+    l[0] = l[2]
+    l[2] = l[3]
+    l[3] = tmp
+
+
 def warpImag(src_img: np.ndarray, dst_img: np.ndarray) -> None:
     """
     Displays both images, and lets the user mark 4 or more points on each image.
@@ -143,6 +172,10 @@ def warpImag(src_img: np.ndarray, dst_img: np.ndarray) -> None:
     cv2.setMouseCallback('dst_img', click_event)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+    if len(dst_pts) != 4:
+        print("must get 4 points!")
+        return
+    toRect(dst_pts)
     dst_pts = np.array(dst_pts)
 
     flag = 'src'
@@ -151,10 +184,11 @@ def warpImag(src_img: np.ndarray, dst_img: np.ndarray) -> None:
     cv2.setMouseCallback('src_img', click_event)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+    if len(src_pts) != 4:
+        print("must get 4 points!")
+        return
+    toRect(src_pts)
     src_pts = np.array(src_pts)
-
-    print(dst_pts)
-    print(src_pts)
 
     H, _ = cv2.findHomography(src_pts, dst_pts)
 
