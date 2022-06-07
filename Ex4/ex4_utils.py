@@ -18,8 +18,6 @@ def disparitySSD(img_l: np.ndarray, img_r: np.ndarray, disp_range: (int, int), k
         img_l = img_l[:, :, 0]
         img_r = img_r[:, :, 0]
 
-    plt.imshow(img_l)
-    plt.show()
     disparity_map = np.zeros((img_l.shape[0], img_l.shape[1]))
 
     # for each pixel in img_l, take a window to compare with img_r
