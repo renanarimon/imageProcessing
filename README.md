@@ -1,17 +1,12 @@
-# imageProcessing_Ex2
+# imageProcessing
 
-### conv1D(): 
-    Convolve a 1-D array with a given kernel
-    In each iteration we will only multiply the relevant parts in each array
-    
-### conv2D(): 
-    Convolve a 2-D array with a given kernel    
-![image](https://user-images.githubusercontent.com/77155986/165689186-823e48c9-07f2-4d7f-a489-e9c6d3867f7d.png)
-
-    
-### convDerivative():
-    Calculate gradient of an image
-![image](https://user-images.githubusercontent.com/77155986/165689400-b616a404-2eab-42b2-aaa6-a9faa99baf96.png)
+Implementation of algorithms in image processing and computer vision.
+For example:
+* Lucas–Kanade method
+* Edge Detection
+* Image Filters
+* Image Warping
+* Gamma correction
 
 ### blurImage1():
     Blur an image using a Gaussian kernel
