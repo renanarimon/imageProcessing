@@ -159,7 +159,7 @@ def biliteralFilterDemo():
 
 
 def myID():
-    return 207616830
+    return 0
 
 
 def main():
