@@ -17,7 +17,7 @@ def displayDepthImage(l_img, r_img, disparity_range=(0, 5), method=disparitySSD)
 
 def main():
     # Print your ID number
-    print("ID:", 207616830)
+    print("ID:", 0)
 
     # Read images
     i = 0
