@@ -8,10 +8,6 @@ For example:
 * Image Warping
 * Gamma correction
 
-### blurImage1():
-    Blur an image using a Gaussian kernel
-![image](https://user-images.githubusercontent.com/77155986/165689535-e698da43-85e4-4c4f-bbd6-be841bab2653.png)
-
 ### edgeDetectionZeroCrossingLOG():
     Detecting edges using "ZeroCrossingLOG" method:
     Laplacian of Gausian
