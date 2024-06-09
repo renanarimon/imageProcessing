@@ -2,7 +2,7 @@
 
 Implementation of algorithms in image processing and computer vision.
 For example:
-* Lucas–Kanade method
+* Lucas–Kanade Algorithm
 * Edge Detection
 * Image Filters
 * Image Warping
